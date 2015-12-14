@@ -19,9 +19,9 @@
         }
 
         [HttpPost]
-        public ActionResult SubmitQuery(string sqlQuery)
+        public ActionResult SubmitQuery(QoPackage model)
         {
-            if (string.IsNullOrEmpty(sqlQuery))
+            if (string.IsNullOrEmpty(model.SqlQuery))
             {
                 Response.StatusCode = 400;
                 return Json("No query was received!", JsonRequestBehavior.AllowGet);
@@ -29,7 +29,7 @@
 
             var p = new TSql120Parser(false);
             IList<ParseError> errors = new List<ParseError>();
-            var result = p.Parse(new StringReader(sqlQuery), out errors);
+            var result = p.Parse(new StringReader(model.SqlQuery), out errors);
 
             if(errors.Any())
             {
@@ -48,5 +48,25 @@
 
             return Json(result.ScriptTokenStream, JsonRequestBehavior.AllowGet);
         } 
+
+    }
+
+    public class QoPackage
+    {
+        public string SqlQuery { get; set; }
+        public Table[] Tables { get; set; }
+    }
+
+    public class Table
+    {
+        public string Name { get; set; }
+        public Attribute[] Attributes { get; set; }
+    }
+
+    public class Attribute
+    {
+        public string Name { get; set; }
+        public string Type { get; set; }
+        public bool IsFk { get; set; }
     }
 }

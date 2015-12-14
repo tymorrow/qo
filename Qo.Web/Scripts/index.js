@@ -27,12 +27,12 @@
 
         var input = $('#txtSQL').val();
         var formatted = SqlPrettyPrinter.format(input, settings);
-        
+        console.log(getSchema());
         $.ajax({
             type: "POST",
             url: '/home/submitquery',
             contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
-            data: { sqlQuery: input },
+            data: { SqlQuery: input, Tables: getSchema() },
             success: function (result) {
                 console.log(result);
             },
@@ -125,13 +125,21 @@
         $('#txtSQL').focus();
     };
 
+    // Schema functions
     window.addTable = function () {
         var tableName = $('#new-table').val();
+        if (!tableName) {
+            alert("Please enter a table name.");
+            return;
+        } else if (document.getElementById(tableName) !== null) {
+            alert("This attribute name is already in use.  Please choose another.");
+            return;
+        }
         var tableHtml =
         '\
             <div class="list-group table" id="'+ tableName +'"> \
-                <div class ="list-group-item name list-group-item-success"> \
-                    '+ tableName +' \
+                <div class ="list-group-item list-group-item-success"> \
+                    <span class="table-name">' + tableName + '</span> \
                     <button class="btn btn-default btn-xs pull-right" type="button" onclick="removeTable(\''+ tableName +'\')" \
                             data-toggle="tooltip" data-placement="right" title="Delete Table"> \
                         <span class="glyphicon glyphicon-minus  "></span> \
@@ -141,16 +149,17 @@
                     <div class="input-group"> \
                         <input type="text" class="form-control" id="name" \
                                placeholder="Enter attribute name" /> \
-                        <span class="input-group-btn"> \
-                            <button class="btn btn-default" type="button" onclick="addTableAttribute(\''+ tableName +'\')" \
-                                    data-toggle="tooltip" data-placement="right" title="Add Attribute"> \
-                                <span class="glyphicon glyphicon-plus"></span> \
-                            </button> \
+                        <span class="input-group-addon"> \
+                            <input type="checkbox" id="fk" /> fk \
                         </span> \
-                    </div> \
+                    </div><br/> \
                     <div class="input-group"> \
-                        <input type="text" class="form-control" id="name" \
-                               placeholder="Enter attribute name" /> \
+                        <select class="form-control" id="type"> \
+                            <option>int</option> \
+                            <option>double</option> \
+                            <option>string</option> \
+                            <option>datetime</option> \
+                        </select> \
                         <span class="input-group-btn"> \
                             <button class="btn btn-default" type="button" onclick="addTableAttribute(\''+ tableName + '\')" \
                                     data-toggle="tooltip" data-placement="right" title="Add Attribute"> \
@@ -166,19 +175,26 @@
     };
     
     window.addTableAttribute = function (tableId) {
-        var table = $('#' + tableId).val().trim();
+
         var attName = $('#' + tableId + ' #new-att #name').val();
         var attId = tableId + '-' + attName;
+        if (document.getElementById(attId) !== null) {
+            alert("This attribute name is already in use.  Please choose another.");
+            return;
+        }
+        var attType = $('#' + tableId + ' #new-att #type').val();
+        var attFk = $('#' + tableId + ' #new-att #fk').is(':checked');
+        var attNameHtml = attFk
+            ? '<u class="' + tableId + '-att-name" id="' + attId + '-name">' + attName + '</u>'
+            : '<span class="' + tableId + '-att-name" id="' + attId + '-name">' + attName + '</span>';
         var attHtml =
         '\
-            <div class="list-group att" id="' + attId + '"> \
-                <div class ="list-group-item name"> \
-                    ' + attName + ' \
-                    <button class="btn btn-default btn-xs pull-right" type="button" onclick="removeTableAttribute(\'' + attId + '\')" \
-                            data-toggle="tooltip" data-placement="right" title="Delete Attribute"> \
-                        <span class="glyphicon glyphicon-minus"></span> \
-                    </button> \
-                </div> \
+            <div class ="list-group-item att" id="' + attId + '"> \
+                ' + attNameHtml + ' <small class="type" id="' + attId + '-type">' + attType + '</small> \
+                <button class="btn btn-default btn-xs pull-right" type="button" onclick="removeTableAttribute(\'' + attId + '\')" \
+                        data-toggle="tooltip" data-placement="right" title="Delete Attribute"> \
+                    <span class="glyphicon glyphicon-minus"></span> \
+                </button> \
             </div> \
         ';
         $('#' + tableId).append(attHtml);
@@ -187,10 +203,32 @@
     window.removeTable = function (id) {
         $('#'+id.trim()).remove();
     };
+
     window.removeTableAttribute = function (id) {
         $('#' + id.trim()).remove();
     };
 
+    window.getSchema = function () {
+        var schema = [];
+        $('.table-name').each(function (index, ele) {
+            var tableName = ele.innerText;
+            var table = { Name: tableName, Attributes: [] };
+            $('.' + tableName + '-att-name').each(function (index, ele) {
+                var attName = ele.innerText;
+                var attType = $('#' + tableName + '-' + attName + '-type').text();
+                var att = { Name: attName, Type: attType, IsFk: false };
+
+                if ($('#' + tableName + '-' + attName + '-type').prev().is('u')) {
+                    att.IsFk = true;
+                }
+
+                table.Attributes.push(att);
+            });
+            schema.push(table);
+        });
+        return schema;
+    };
+    
     window.APPDATA = {};
 
 })()

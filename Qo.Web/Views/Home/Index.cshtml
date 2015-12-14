@@ -8,7 +8,12 @@
 <div class="row">
     <div class="col-sm-3">
         <div class="panel panel-default" id="schema">
-            <div class="panel-heading">Schema</div>
+            <div class="panel-heading">
+                Schema
+                <button class="btn btn-default btn-xs pull-right" type="button" onclick="getSchema()">
+                    <span class="glyphicon glyphicon-list"></span>
+                </button>
+            </div>
             <div class="list-group">
                 <div class="list-group-item">
                     <div class="input-group">
@@ -21,51 +26,6 @@
                             </button>
                         </span>
                     </div>
-                </div>
-            </div>
-            <div class="list-group table">
-                <div class="list-group-item name list-group-item-success">
-                    Sailors <small id="tuples"></small>
-                </div>
-                <div class="list-group-item att pk">
-                    <span id="name"><u>sid</u></span><span>(int)</span>
-                </div>
-                <div class="list-group-item att">
-                    <span id="name">sname</span><small>(string)</small>
-                </div>
-                <div class="list-group-item att">
-                    <span id="name">rating</span><small>(int)</small>
-                </div>
-                <div class="list-group-item att">
-                    <span id="name">age</span><small>(double)</small>
-                </div>
-            </div>
-            <div class="list-group table">
-                <div class="list-group-item name list-group-item-success">
-                    Boats <small id="tuples"></small>
-                </div>
-                <div class="list-group-item att pk">
-                    <span id="name"><u>bid</u></span><small>(int)</small>
-                </div>
-                <div class="list-group-item att">
-                    <span id="name">bname</span><small>(string)</small>
-                </div>
-                <div class="list-group-item att">
-                    <span id="name">color</span><small>(string)</small>
-                </div>
-            </div>
-            <div class="list-group table">
-                <div class="list-group-item name list-group-item-success">
-                    Reserves <small id="tuples"></small>
-                </div>
-                <div class="list-group-item att pk">
-                    <span id="name"><u>sid</u></span><small>(int)</small>
-                </div>
-                <div class="list-group-item att">
-                    <span id="name">bid</span><small>(int)</small>
-                </div>
-                <div class="list-group-item att">
-                    <span id="name">day</span><small>(datetime)</small>
                 </div>
             </div>
         </div>

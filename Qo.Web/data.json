@@ -1,0 +1,19 @@
+{
+  "name": "&pi;",
+  "subscript": "Fname,Lname,Address",
+  "children": [
+    {
+      "name": "&sigma;",
+      "subscript": "Dname = 'Research' AND Dnumber = Dno",
+      "children": [
+        {
+          "name": "&times;",
+          "children": [
+            {"name": "EMPLOYEE", "size": 100},
+            {"name": "DEPARTMENT", "size": 100}
+          ]
+        }
+      ]
+    }
+  ]
+}

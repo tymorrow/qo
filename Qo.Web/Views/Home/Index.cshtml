@@ -1,0 +1,125 @@
+﻿<div class="row">
+    <div class="col-xs-12">
+        <h1>SQL Query Optimizer <small>Project for CS 5300</small></h1>
+        <h4>Tyler Morrow</h4>
+        <hr>
+    </div>
+</div>
+<div class="row">
+    <div class="col-xs-12">
+        <div class="alert alert-warning" id="alertContainer" style="display:none"></div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-3">
+        <div class="panel panel-default" id="schema-list">
+            <div class="panel-heading">
+                Schema Info
+                <a class="btn btn-default btn-xs pull-right"><span class="glyphicon glyphicon-cog"></span></a>
+            </div>
+            <div class="list-group" id="schema-list" style="">
+                <div class="list-group-item">
+                    Employee <small>(540 rows)</small>
+                    <a class="btn btn-default btn-xs pull-right"><span class="glyphicon glyphicon-cog"></span></a>
+                </div>
+                <div class="list-group-item"><u>Ssn</u></div>
+                <div class="list-group-item">Fname</div>
+                <div class="list-group-item">Lname</div>
+                <div class="list-group-item">Salary</div>
+                <div class="list-group-item">Dno <small>(FK)</small></div>
+
+                <div class="list-group-item">
+                    Department <small>(15 rows)</small>
+                    <a class="btn btn-default btn-xs pull-right"><span class="glyphicon glyphicon-cog"></span></a>
+                </div>
+                <div class="list-group-item"><u>Dnumber</u></div>
+                <div class="list-group-item">Dname</div>
+                <div class="list-group-item">Mgr_ssn <small>(FK)</small></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-9">
+        <div class="panel panel-default">
+            <div class="panel-heading">Enter the SQL query to optimize</div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <textarea class="form-control" id="txtSQL" onkeyup="saveState()" rows="5" style="max-width:100%"></textarea>
+                </div>
+                <div class="row text-right">
+                    <div class="col-xs-12">
+                        <button onclick="parseAndFormat()" class="btn btn-primary">Optimize!</button>
+                        <button onclick="clearSql()" class="btn btn-default">Clear</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">Formatted SQL query</div>
+            <pre id="preFormatted" class="prettyprint lang-sql"></pre>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">Relational Algebra Representation</div>
+            <pre id="relational-algebra" class="prettyprint lang-sql text-left">
+            &pi;<sub>Fname,Lname,Address</sub> ( &sigma;<sub>Dname='Research' AND Dnumber = Dno</sub> ( EMPLOYEE &times; DEPARTMENT ))
+          </pre>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">Query Tree Visualizer</div>
+
+            <div class="panel-body">
+                <small>Select Optimization Stage</small>
+                <div class="btn-group" role="group" aria-label="...">
+                    <button type="button" class="btn btn-default" id="stage-0"
+                            onclick="$('.stage-info').hide();$('#stage-0-info').show()">
+                        0
+                    </button>
+                    <button type="button" class="btn btn-default" id="stage-1"
+                            onclick="$('.stage-info').hide();$('#stage-1-info').show()">
+                        1
+                    </button>
+                    <button type="button" class="btn btn-default" id="stage-2"
+                            onclick="$('.stage-info').hide();$('#stage-2-info').show()">
+                        2
+                    </button>
+                    <button type="button" class="btn btn-default" id="stage-3"
+                            onclick="$('.stage-info').hide();$('#stage-3-info').show()">
+                        3
+                    </button>
+                    <button type="button" class="btn btn-default" id="stage-4"
+                            onclick="$('.stage-info').hide();$('#stage-4-info').show()">
+                        4
+                    </button>
+                </div>
+                <a class="btn btn-default btn-sm pull-right">
+                    Download Image <span class="glyphicon glyphicon-download"></span>
+                </a>
+            </div>
+
+            <ul class="list-group">
+                <li class="list-group-item" id="stage-info">
+                    <small id="stage-0-info" class="stage-info">
+                        <strong>Stage 0:</strong> No optimizations have been applied yet.
+                    </small>
+                    <small id="stage-1-info" class="stage-info" style="display:none">
+                        <strong>Stage 1:</strong> Break up conjunctive select statements.
+                    </small>
+                    <small id="stage-2-info" class="stage-info" style="display:none">
+                        <strong>Stage 2:</strong> Move more restrive select statements as far down the tree as possible.
+                    </small>
+                    <small id="stage-3-info" class="stage-info" style="display:none">
+                        <strong>Stage 3:</strong> Replace cartesian products and selects with join.
+                    </small>
+                    <small id="stage-4-info" class="stage-info" style="display:none">
+                        <strong>Stage 4:</strong> More projections as far down as possible.
+                    </small>
+                </li>
+                <li class="list-group-item" id="tree" style="height:1000px; padding:0;">
+
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>

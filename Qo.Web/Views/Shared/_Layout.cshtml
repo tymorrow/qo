@@ -21,5 +21,14 @@
     <script src="Scripts/SqlPrettyPrinter.js"></script>
     <script src="Scripts/index.js"></script>
     @RenderSection("scripts", required: false)
+    <script type="text/javascript">
+
+        $(function() {
+            // Activate all tooltips and popovers.
+            $("[data-toggle=\"tooltip\"]").tooltip();
+            $("[data-toggle=\"popover\"]").tooltip();
+        });
+
+    </script>
 </body>
 </html>

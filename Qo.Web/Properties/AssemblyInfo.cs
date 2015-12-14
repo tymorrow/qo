@@ -1,15 +1,14 @@
 ﻿using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("query_optimizer")]
+[assembly: AssemblyTitle("Qo")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("MST")]
-[assembly: AssemblyProduct("query_optimizer")]
+[assembly: AssemblyCompany("")]
+[assembly: AssemblyProduct("Qo")]
 [assembly: AssemblyCopyright("Copyright © MST 2015")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

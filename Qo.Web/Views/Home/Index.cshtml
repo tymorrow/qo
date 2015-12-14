@@ -6,35 +6,67 @@
     </div>
 </div>
 <div class="row">
-    <div class="col-xs-12">
-        <div class="alert alert-warning" id="alertContainer" style="display:none"></div>
-    </div>
-</div>
-<div class="row">
     <div class="col-sm-3">
-        <div class="panel panel-default" id="schema-list">
-            <div class="panel-heading">
-                Schema Info
-                <a class="btn btn-default btn-xs pull-right"><span class="glyphicon glyphicon-cog"></span></a>
+        <div class="panel panel-default" id="schema">
+            <div class="panel-heading">Schema</div>
+            <div class="list-group">
+                <div class="list-group-item">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="new-table"
+                               placeholder="Enter table name" />
+                        <span class="input-group-btn">
+                            <button class="btn btn-default" type="button" onclick="addTable()"
+                                    data-toggle="tooltip" data-placement="right" title="Add Table">
+                                <span class="glyphicon glyphicon-plus"></span>
+                            </button>
+                        </span>
+                    </div>
+                </div>
             </div>
-            <div class="list-group" id="schema-list" style="">
-                <div class="list-group-item">
-                    Employee <small>(540 rows)</small>
-                    <a class="btn btn-default btn-xs pull-right"><span class="glyphicon glyphicon-cog"></span></a>
+            <div class="list-group table">
+                <div class="list-group-item name list-group-item-success">
+                    Sailors <small id="tuples"></small>
                 </div>
-                <div class="list-group-item"><u>Ssn</u></div>
-                <div class="list-group-item">Fname</div>
-                <div class="list-group-item">Lname</div>
-                <div class="list-group-item">Salary</div>
-                <div class="list-group-item">Dno <small>(FK)</small></div>
-
-                <div class="list-group-item">
-                    Department <small>(15 rows)</small>
-                    <a class="btn btn-default btn-xs pull-right"><span class="glyphicon glyphicon-cog"></span></a>
+                <div class="list-group-item att pk">
+                    <span id="name"><u>sid</u></span><span>(int)</span>
                 </div>
-                <div class="list-group-item"><u>Dnumber</u></div>
-                <div class="list-group-item">Dname</div>
-                <div class="list-group-item">Mgr_ssn <small>(FK)</small></div>
+                <div class="list-group-item att">
+                    <span id="name">sname</span><small>(string)</small>
+                </div>
+                <div class="list-group-item att">
+                    <span id="name">rating</span><small>(int)</small>
+                </div>
+                <div class="list-group-item att">
+                    <span id="name">age</span><small>(double)</small>
+                </div>
+            </div>
+            <div class="list-group table">
+                <div class="list-group-item name list-group-item-success">
+                    Boats <small id="tuples"></small>
+                </div>
+                <div class="list-group-item att pk">
+                    <span id="name"><u>bid</u></span><small>(int)</small>
+                </div>
+                <div class="list-group-item att">
+                    <span id="name">bname</span><small>(string)</small>
+                </div>
+                <div class="list-group-item att">
+                    <span id="name">color</span><small>(string)</small>
+                </div>
+            </div>
+            <div class="list-group table">
+                <div class="list-group-item name list-group-item-success">
+                    Reserves <small id="tuples"></small>
+                </div>
+                <div class="list-group-item att pk">
+                    <span id="name"><u>sid</u></span><small>(int)</small>
+                </div>
+                <div class="list-group-item att">
+                    <span id="name">bid</span><small>(int)</small>
+                </div>
+                <div class="list-group-item att">
+                    <span id="name">day</span><small>(datetime)</small>
+                </div>
             </div>
         </div>
     </div>

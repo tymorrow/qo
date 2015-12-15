@@ -1,8 +1,8 @@
 ﻿(function () {
     // See if we have localStorage support
     // This is caching the last query in the browsers local storage - purely for convenience.
-    // Basically if you refresh the page, you won't lose the query you just entered
-    var storage, fail, uid
+    // Basically if you refresh the page, you won't lose the query or schema you just entered.
+    var storage, fail, uid;
     try {
         uid = new Date;
         (storage = window.localStorage).setItem(uid, uid);
@@ -10,12 +10,6 @@
         storage.removeItem(uid);
         fail && (storage = false);
     } catch (e) { }
-    window.saveState = function () {
-        if (storage) localStorage.setItem('sentence', $('#txtSQL').val());
-    };
-    if (storage && localStorage.getItem('sentence')) {
-        $('#txtSQL').val(localStorage.getItem('sentence'));
-    };
 
     // Function to parse SQL query
     window.parseAndFormat = function () {
@@ -46,9 +40,10 @@
         $('#preFormatted').removeClass('prettyprinted');
         window.APPDATA.formatted = formatted;
 
-        $('#ra-expression').show();
+        //$('#ra-expression').show();
 
         // BEGIN BUILDING TREE
+        $('#tree').empty();
         var width = $("#tree").parent().width();
         var height = $("#tree").parent().height();
 
@@ -123,9 +118,61 @@
         $('#preFormatted').html('');
         $('#txtSQL').val('');
         $('#txtSQL').focus();
+        saveState();
     };
 
     // Schema functions
+    window.saveState = function () {
+        if (storage) {
+            localStorage.setItem('query', $('#txtSQL').val());
+            localStorage.setItem('schema', JSON.stringify(getSchema()));
+        }
+    };
+
+    window.getSchema = function () {
+        var schema = [];
+        $('.table-name').each(function (index, ele) {
+            var tableName = ele.innerText;
+            var table = { Name: tableName, Attributes: [] };
+            $('.' + tableName + '-att-name').each(function (index, ele) {
+                var attName = ele.innerText;
+                var attType = $('#' + tableName + '-' + attName + '-type').text();
+                var att = { Name: attName, Type: attType, IsFk: false };
+
+                if ($('#' + tableName + '-' + attName + '-type').prev().is('u')) {
+                    att.IsFk = true;
+                }
+
+                table.Attributes.push(att);
+            });
+            schema.push(table);
+        });
+        return schema;
+    };
+
+    window.setSchema = function (schema) {
+        for (var t in schema) {
+            var table = schema[t];
+            $('#new-table').val(table.Name);
+            addTable();
+            for (var a in table.Attributes) {
+                var att = table.Attributes[a];
+                $('#' + table.Name + ' #new-att #name').val(att.Name);
+                $('#' + table.Name + ' #new-att #type').val(att.Type);
+                if (att.IsFk) {
+                    $('#' + table.Name + ' #new-att #fk').prop('checked', true);
+                } else {
+                    $('#' + table.Name + ' #new-att #fk').prop('checked', false);
+                }
+                addTableAttribute(table.Name);
+            }
+            $('#' + table.Name + ' #new-att #name').val('');
+            $('#' + table.Name + ' #new-att #type').val('int');
+            $('#' + table.Name + ' #new-att #fk').prop('checked', false);
+        }
+        $('#new-table').val('');
+    };
+
     window.addTable = function () {
         var tableName = $('#new-table').val();
         if (!tableName) {
@@ -137,10 +184,10 @@
         }
         var tableHtml =
         '\
-            <div class="list-group table" id="'+ tableName +'"> \
+            <div class="list-group table" id="' + tableName + '"> \
                 <div class ="list-group-item list-group-item-success"> \
                     <span class="table-name">' + tableName + '</span> \
-                    <button class="btn btn-default btn-xs pull-right" type="button" onclick="removeTable(\''+ tableName +'\')" \
+                    <button class="btn btn-default btn-xs pull-right" type="button" onclick="removeTable(\''+ tableName + '\')" \
                             data-toggle="tooltip" data-placement="right" title="Delete Table"> \
                         <span class="glyphicon glyphicon-minus  "></span> \
                     </button> \
@@ -172,8 +219,9 @@
         ';
         $('#schema').append(tableHtml);
         $('#new-table').val('');
+        saveState();
     };
-    
+
     window.addTableAttribute = function (tableId) {
 
         var attName = $('#' + tableId + ' #new-att #name').val();
@@ -189,7 +237,7 @@
             : '<span class="' + tableId + '-att-name" id="' + attId + '-name">' + attName + '</span>';
         var attHtml =
         '\
-            <div class ="list-group-item att" id="' + attId + '"> \
+            <div class ="list-group-item att" id="' + attId + '""> \
                 ' + attNameHtml + ' <small class="type" id="' + attId + '-type">' + attType + '</small> \
                 <button class="btn btn-default btn-xs pull-right" type="button" onclick="removeTableAttribute(\'' + attId + '\')" \
                         data-toggle="tooltip" data-placement="right" title="Delete Attribute"> \
@@ -198,37 +246,31 @@
             </div> \
         ';
         $('#' + tableId).append(attHtml);
+        saveState();
     };
 
     window.removeTable = function (id) {
-        $('#'+id.trim()).remove();
+        $('#' + id.trim()).remove();
+        saveState();
     };
 
     window.removeTableAttribute = function (id) {
         $('#' + id.trim()).remove();
+        saveState();
     };
 
-    window.getSchema = function () {
-        var schema = [];
-        $('.table-name').each(function (index, ele) {
-            var tableName = ele.innerText;
-            var table = { Name: tableName, Attributes: [] };
-            $('.' + tableName + '-att-name').each(function (index, ele) {
-                var attName = ele.innerText;
-                var attType = $('#' + tableName + '-' + attName + '-type').text();
-                var att = { Name: attName, Type: attType, IsFk: false };
+    // If localStorage is enabled, populate the page
+    if (storage) {
+        // Get values from local storage
+        var query = localStorage.getItem('query');
+        var schema = localStorage.getItem('schema');
+        // Set values if they exist
+        if (query) $('#txtSQL').val(query);
+        if (schema) {
+            var parsedSchema = JSON.parse(schema);
+            setSchema(parsedSchema);
+        }
+    }
 
-                if ($('#' + tableName + '-' + attName + '-type').prev().is('u')) {
-                    att.IsFk = true;
-                }
-
-                table.Attributes.push(att);
-            });
-            schema.push(table);
-        });
-        return schema;
-    };
-    
     window.APPDATA = {};
-
 })()

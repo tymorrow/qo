@@ -28,7 +28,7 @@
             }
 
             var p = new TSql120Parser(false);
-            IList<ParseError> errors = new List<ParseError>();
+            IList<ParseError> errors;
             var result = p.Parse(new StringReader(model.SqlQuery), out errors);
 
             if(errors.Any())
@@ -46,9 +46,20 @@
 
             }
 
-            return Json(result.ScriptTokenStream, JsonRequestBehavior.AllowGet);
+            var response = new QoResponse
+            {
+                Tokens = result.ScriptTokenStream,
+                Tables = model.Tables
+            };
+            return Json(response, JsonRequestBehavior.AllowGet);
         } 
 
+    }
+
+    public class QoResponse
+    {
+        public IList<TSqlParserToken> Tokens { get; set; }
+        public Table[] Tables { get; set; }
     }
 
     public class QoPackage

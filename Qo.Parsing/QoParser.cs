@@ -25,7 +25,6 @@
         };
         private int _queryCounter;
         private Node _tree = new Node();
-
         
         public QoParser()
         {
@@ -61,23 +60,19 @@
                     {
                         sb.AppendLine(e.Message);
                     }
-                    _console.WriteToConsole(sb.ToString());
+                    _console.WriteLine(sb.ToString());
                 }
                 else
                 {
-                    foreach (TSqlBatch batch in script.Batches)
-                    {
-                        foreach (TSqlStatement statement in batch.Statements)
-                        {
-                            ProcessStatement(statement);
-                        }
-                    }
+                    var batch = script.Batches.First();
+                    var statement = batch.Statements.First();
+                    ProcessStatement(statement);
                     success = true;
                 }
             }
             catch (Exception e)
             {
-                _console.WriteToConsole(e.Message);
+                _console.WriteLine(e.Message);
             }
             
             return success;
@@ -95,52 +90,58 @@
         }
 
         public void ProcessQueryExpression(QueryExpression exp)
-        {
-            if (exp is TSql.QuerySpecification)
+        {            
+            if (exp is QuerySpecification) // Actual Select Statement
             {
-                // Actual Select Statement
-                ProcessQuerySpecification(exp as TSql.QuerySpecification);
+                var query = ProcessQuerySpecification(exp as QuerySpecification);
+                _console.WriteLine(query.GetQueryTree().ToString());
             }
-            else if (exp is TSql.BinaryQueryExpression)
+            else if (exp is BinaryQueryExpression) // Union
             {
-                // Union
-                ProcessBinaryQueryExpression(exp as TSql.BinaryQueryExpression);
+                
+                ProcessBinaryQueryExpression(exp as BinaryQueryExpression);
             }
-            if (exp is TSql.QueryParenthesisExpression)
+            else if (exp is QueryParenthesisExpression) // Select surrounded by paranthesis - sub-select
             {
-                // Select surrounded by paranthesis - sub-select
-                throw new NotImplementedException("QueryParenthesisExpression not implemented.");
+                var par = exp as QueryParenthesisExpression;
+                ProcessQueryExpression(par.QueryExpression);
             }
         }
 
-        public void ProcessQuerySpecification(QuerySpecification s)
+        public Query ProcessQuerySpecification(QuerySpecification spec)
         {
-            if (s == null) return;
-            // Select Expression
-            Debug.WriteLine("SELECT");
+            var query = new Query();
+
+            _console.WriteLine("SELECT");
             Debug.Indent();
-            foreach (SelectScalarExpression exp in s.SelectElements)
+            foreach (SelectScalarExpression exp in spec.SelectElements)
             {
-                ProcessSelectScalarExpression(exp);
+                var att = ProcessSelectScalarExpression(exp);
+                query.Select.Attributes.Add(att);
             }
             Debug.Unindent();
-            // From Expression
-            Debug.WriteLine("FROM");
+
+            _console.WriteLine("FROM");
             Debug.Indent();
-            foreach (NamedTableReference t in s.FromClause.TableReferences)
+            foreach (NamedTableReference t in spec.FromClause.TableReferences)
             {
+                var tableName = t.SchemaObject.BaseIdentifier.Value;
+                var relation = _schema.Relations.Single(r => r.Name == tableName);
+                query.From.Relations.Add(relation);
+
                 if (t.Alias != null)
                 {
-                    Debug.Write(t.Alias.Value + " ");
+                    if (!relation.Aliases.Contains(t.Alias.ToString()))
+                        relation.Aliases.Add(t.Alias.ToString());
+                    _console.Write(t.Alias.Value + " ");
                 }
-                Debug.Write(t.SchemaObject.BaseIdentifier.Value);
-                Debug.WriteLine(string.Empty);
+                _console.Write(t.SchemaObject.BaseIdentifier.Value);
+                _console.WriteLine(string.Empty);
             }
             Debug.Unindent();
-            Debug.WriteLine("WHERE");
+            _console.WriteLine("WHERE");
             Debug.Indent();
-            // Where Expression - identify type to recurse appropriately
-            var whereClauseExpression = s.WhereClause.SearchCondition;
+            var whereClauseExpression = spec.WhereClause.SearchCondition;
             if (whereClauseExpression is BooleanBinaryExpression)
             {
                 var whereClause = whereClauseExpression as BooleanBinaryExpression;
@@ -173,8 +174,8 @@
                 var expression = whereClause.Expression as ColumnReferenceExpression;
                 var subQuery = whereClause.Subquery as ScalarSubquery;
                 ProcessColumnReferenceExpression(expression);
-                Debug.WriteLine("IN ");
-                Debug.WriteLine("(");
+                _console.WriteLine("IN ");
+                _console.WriteLine("(");
                 Debug.Indent();
                 if (subQuery.QueryExpression is BinaryQueryExpression)
                 {
@@ -189,7 +190,7 @@
                     throw new Exception("Subquery type not handled.");
                 }
                 Debug.Unindent();
-                Debug.WriteLine(")");
+                _console.WriteLine(")");
             }
             else if (whereClauseExpression is SubqueryComparisonPredicate)
             {
@@ -202,27 +203,28 @@
             Debug.Unindent();
 
             // Group By Expression
-            if (s.GroupByClause != null)
+            if (spec.GroupByClause != null)
             {
-                Debug.WriteLine("GROUP BY");
+                _console.WriteLine("GROUP BY");
                 Debug.Indent();
-                var groupByClause = s.GroupByClause;
-                foreach (ExpressionGroupingSpecification spec in groupByClause.GroupingSpecifications)
+                var groupByClause = spec.GroupByClause;
+                foreach (ExpressionGroupingSpecification gSpec in groupByClause.GroupingSpecifications)
                 {
-                    if (spec.Expression is ColumnReferenceExpression)
+                    if (gSpec.Expression is ColumnReferenceExpression)
                     {
-                        ProcessColumnReferenceExpression(spec.Expression as ColumnReferenceExpression);
+                        ProcessColumnReferenceExpression(gSpec.Expression as ColumnReferenceExpression);
                     }
                 }
                 Debug.Unindent();
-                Debug.WriteLine(string.Empty);
+                _console.WriteLine(string.Empty);
             }
+
             // Having Expression
-            if (s.HavingClause != null)
+            if (spec.HavingClause != null)
             {
-                Debug.WriteLine("HAVING ");
+                _console.WriteLine("HAVING ");
                 Debug.Indent();
-                var havingClauseExpression = s.HavingClause.SearchCondition;
+                var havingClauseExpression = spec.HavingClause.SearchCondition;
                 if (havingClauseExpression is BooleanBinaryExpression)
                 {
                     ProcessBooleanBinaryExpression(havingClauseExpression as BooleanBinaryExpression);
@@ -238,57 +240,41 @@
                 Debug.Unindent();
             }
 
-            //s.Dump();
+            return query;
         }
 
         public void ProcessBinaryQueryExpression(BinaryQueryExpression exp)
         {
-            Debug.WriteLine("(");
-            if (exp.FirstQueryExpression is QueryParenthesisExpression)
-            {
-                var first = exp.FirstQueryExpression as QueryParenthesisExpression;
-                ProcessQuerySpecification(first.QueryExpression as QuerySpecification);
-            }
-            else if (exp.FirstQueryExpression is QuerySpecification)
-            {
-                var first = exp.FirstQueryExpression as QuerySpecification;
-                ProcessQuerySpecification(first);
-            }
-            else
-            {
-                throw new NotImplementedException("FirstQueryExpression of BinaryQueryExpression type not found.");
-            }
-            Debug.WriteLine(")");
-            Debug.WriteLine(exp.BinaryQueryExpressionType);
-            Debug.WriteLine("(");
-            if (exp.SecondQueryExpression is QueryParenthesisExpression)
-            {
-                var second = exp.SecondQueryExpression as QueryParenthesisExpression;
-                ProcessQuerySpecification(second.QueryExpression as QuerySpecification);
-            }
-            else if (exp.SecondQueryExpression is QuerySpecification)
-            {
-                ProcessQuerySpecification(exp.SecondQueryExpression as QuerySpecification);
-            }
-            else
-            {
-                throw new NotImplementedException("SecondQueryExpression of BinaryQueryExpression type not found.");
-            }
-            Debug.WriteLine(")");
+            _console.WriteLine("(");
+            ProcessQueryExpression(exp.FirstQueryExpression);
+            _console.WriteLine(")");
+            _console.WriteLine(exp.BinaryQueryExpressionType.ToString());
+            _console.WriteLine("(");
+            ProcessQueryExpression(exp.SecondQueryExpression);
+            _console.WriteLine(")");
         }
 
-        public void ProcessColumnReferenceExpression(ColumnReferenceExpression exp)
+        public dynamic ProcessColumnReferenceExpression(ColumnReferenceExpression exp)
         {
             if (exp.ColumnType == ColumnType.Regular)
             {
+                var att = new QueryModel.Attribute();
+                att.Alias = exp.MultiPartIdentifier.Identifiers[0].Value;
+                att.Name = exp.MultiPartIdentifier.Identifiers[1].Value;
                 foreach (var i in exp.MultiPartIdentifier.Identifiers)
                 {
-                    Debug.Write(i.Value + " ");
+                    _console.Write(i.Value + " ");
                 }
+                return att;
             }
             else if (exp.ColumnType == ColumnType.Wildcard)
             {
-                Debug.Write("*");
+                _console.Write("*");
+                return "*";
+            }
+            else
+            {
+                throw new Exception("ColumnReferenceExpression could not be identified.");
             }
         }
 
@@ -308,7 +294,7 @@
             {
 
             }
-            Debug.WriteLine(exp.BinaryExpressionType);
+            _console.WriteLine(exp.BinaryExpressionType.ToString());
             if (exp.SecondExpression is BooleanBinaryExpression)
             {
                 var second = exp.SecondExpression as BooleanBinaryExpression;
@@ -329,59 +315,83 @@
         {
             if (exp == null) return;
             ProcessScalarExpression(exp.FirstExpression);
-            Debug.Write(exp.ComparisonType + " ");
+            _console.Write(exp.ComparisonType + " ");
             ProcessScalarExpression(exp.SecondExpression);
-            Debug.WriteLine(string.Empty);
+            _console.WriteLine(string.Empty);
         }
 
-        public void ProcessScalarExpression(ScalarExpression exp)
+        public dynamic ProcessSelectScalarExpression(SelectScalarExpression exp)
+        {
+            var att = ProcessScalarExpression(exp.Expression);
+            if (exp.ColumnName != null)
+            {
+                _console.Write(exp.ColumnName.Value);
+            }
+            _console.WriteLine(string.Empty);
+
+            return att;
+        }
+
+        public dynamic ProcessScalarExpression(ScalarExpression exp)
         {
             if (exp is ColumnReferenceExpression)
             {
-                ProcessColumnReferenceExpression(exp as ColumnReferenceExpression);
+                return ProcessColumnReferenceExpression(exp as ColumnReferenceExpression);
             }
             else if (exp is FunctionCall)
             {
-                var func = exp as FunctionCall;
-                Debug.Write(func.FunctionName.Value + "(");
-                foreach (ScalarExpression p in func.Parameters)
-                {
-                    ProcessScalarExpression(p);
+                var funcExp = exp as FunctionCall;
+                var func = new Function();
+                func.Type = funcExp.FunctionName.Value;
+
+                _console.Write(funcExp.FunctionName.Value + "(");
+                foreach (ScalarExpression p in funcExp.Parameters)
+                {                    
+                    var col = ProcessScalarExpression(p);
+                    if(col is QueryModel.Attribute)
+                    {
+                        var att = col as QueryModel.Attribute;
+                        func.Attributes.Add(att);
+                    }
+                    else if(col is string)
+                    {
+                        var att = col as string;
+                        if(att == "*")
+                        {
+                            func.IsWildCard = true;
+                            break;
+                        }
+                    }
                 }
-                Debug.Write(") ");
+                _console.Write(") ");
+                return func;
             }
             else if (exp is StringLiteral)
             {
                 var text = exp as StringLiteral;
-                Debug.Write("\"" + text.Value + "\" ");
+                _console.Write("\"" + text.Value + "\" ");
+                return text.Value;
             }
             else if (exp is ScalarSubquery)
             {
                 var subquery = exp as ScalarSubquery;
-                Debug.WriteLine(string.Empty);
-                Debug.WriteLine("(");
-                ProcessQuerySpecification(subquery.QueryExpression as QuerySpecification);
-                Debug.WriteLine(")");
+                _console.WriteLine(string.Empty);
+                _console.WriteLine("(");
+                var query = ProcessQuerySpecification(subquery.QueryExpression as QuerySpecification);
+                _console.WriteLine(")");
+                return query;
             }
             else if (exp is IntegerLiteral)
             {
                 var integer = exp as IntegerLiteral;
-                Debug.Write(integer.Value);
+                _console.Write(integer.Value);
+                return integer;
             }
             else
             {
-                Debug.WriteLine("Scalar expression not identified.");
+                _console.WriteLine("Scalar expression not identified.");
+                return 0;
             }
-        }
-
-        public void ProcessSelectScalarExpression(SelectScalarExpression exp)
-        {
-            ProcessScalarExpression(exp.Expression);
-            if (exp.ColumnName != null)
-            {
-                Debug.Write(exp.ColumnName.Value);
-            }
-            Debug.WriteLine(string.Empty);
         }
 
         #endregion

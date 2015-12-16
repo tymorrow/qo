@@ -46,6 +46,7 @@
     <Compile Include="Console.cs" />
     <Compile Include="IConsole.cs" />
     <Compile Include="Optimizer.cs" />
+    <Compile Include="QueryModel\Function.cs" />
     <Compile Include="QueryModel\Attribute.cs" />
     <Compile Include="QueryModel\Condition.cs" />
     <Compile Include="QueryModel\FromStatement.cs" />

@@ -12,7 +12,7 @@
         {
             var relation1 = new Relation
             {
-                Name = "sailors",
+                Name = "Sailors",
                 Attributes = new List<Attribute>
                 {
                     new Attribute { Name = "sid", Type = "int" },
@@ -29,7 +29,7 @@
 
             var relation2 = new Relation
             {
-                Name = "boats",
+                Name = "Boats",
                 Attributes = new List<Attribute>
                 {
                     new Attribute { Name = "bid", Type = "int" },
@@ -45,7 +45,7 @@
 
             var relation3 = new Relation
             {
-                Name = "reserves",
+                Name = "Reserves",
                 Attributes = new List<Attribute>
                 {
                     new Attribute { Name = "sid", Type = "int" },

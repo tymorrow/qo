@@ -8,11 +8,11 @@
     /// </summary>
     public class SelectStatement
     {
-        public List<Attribute> Attributes { get; set; }
+        public List<dynamic> Attributes { get; set; }
 
         public SelectStatement()
         {
-            Attributes = new List<Attribute>();
+            Attributes = new List<dynamic>();
         }
 
         /// <summary>

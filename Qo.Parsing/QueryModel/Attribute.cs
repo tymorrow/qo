@@ -10,6 +10,13 @@
         public string Type { get; set; }
         public int QueryNumber { get; set; }
 
+        public Attribute()
+        {
+            Alias = string.Empty;
+            Name = string.Empty;
+            Type = string.Empty;
+        }
+
         /// <summary>
         /// Converts the Attribute to its string representation.
         /// </summary>

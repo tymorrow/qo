@@ -6,7 +6,7 @@
 
     public class Projection
     {
-        public List<Attribute> Attributes { get; set; }
+        public List<dynamic> Attributes { get; set; }
 
         /// <summary>
         /// Converts the Projection to its string representation.
@@ -21,7 +21,16 @@
 
             for (var i = 0; i < Attributes.Count; i++)
             {
-                output += Attributes[i].ToString();
+                if (Attributes[i] is Attribute)
+                {
+                    var a = Attributes[i] as Attribute;
+                    output += a.ToString();
+                }
+                else if(Attributes[i] is Function)
+                {
+                    var a = Attributes[i] as Function;
+                    output += a.ToString();
+                }
                 if (i < Attributes.Count - 1 && i + 1 < Attributes.Count)
                     output = output.Insert(output.Length - 1, ",");
             }

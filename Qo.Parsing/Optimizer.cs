@@ -267,7 +267,7 @@
                         {
                             Content = new Projection
                             {
-                                Attributes = new List<Attribute>(intersection)
+                                Attributes = new List<dynamic>(intersection)
                             },
                             Parent = iterator.Parent,
                             LeftChild = iterator
@@ -388,9 +388,9 @@
         /// <summary>
         /// Returns a list of attributes needed directly above the provided node.
         /// </summary>
-        private List<Attribute> GetMinimumParentalAttributes(Node node, Node root)
+        private List<dynamic> GetMinimumParentalAttributes(Node node, Node root)
         {
-            var result = new List<Attribute>();
+            var result = new List<dynamic>();
 
             var iterator = node.Parent;
             while (iterator != root)
@@ -425,9 +425,9 @@
         /// <summary>
         /// Returns a list of attributes accessible from the current node.
         /// </summary>
-        private List<Attribute> GetAccessibleAttributes(Node node)
+        private List<dynamic> GetAccessibleAttributes(Node node)
         {
-            var result = new List<Attribute>();
+            var result = new List<dynamic>();
 
             if (node.Content is Projection)
             {

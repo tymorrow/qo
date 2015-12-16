@@ -1,5 +1,6 @@
 ﻿namespace Qo.Parsing.RelationalModel
 {
+    using Microsoft.SqlServer.TransactSql.ScriptDom;
     using QueryModel;
     using System;
     using System.Collections.Generic;
@@ -11,19 +12,19 @@
     /// </summary>
     public class Selection
     {
-        private readonly Dictionary<LogicalOperator, string> _operatorMap = new Dictionary<LogicalOperator, string>
+        private readonly Dictionary<BooleanBinaryExpressionType, string> _operatorMap = new Dictionary<BooleanBinaryExpressionType, string>
         {
-            {LogicalOperator.And, "AND "},
-            {LogicalOperator.Or, "OR "}
+            {BooleanBinaryExpressionType.And, "AND "},
+            {BooleanBinaryExpressionType.Or, "OR "}
         };
 
         public List<Condition> Conditions { get; set; }
-        public Dictionary<Tuple<Condition, Condition>, LogicalOperator> Operators { get; set; }
+        public Dictionary<Tuple<Condition, Condition>, BooleanBinaryExpressionType> Operators { get; set; }
 
         public Selection()
         {
             Conditions = new List<Condition>();
-            Operators = new Dictionary<Tuple<Condition, Condition>, LogicalOperator>();
+            Operators = new Dictionary<Tuple<Condition, Condition>, BooleanBinaryExpressionType>();
         }
 
         /// <summary>

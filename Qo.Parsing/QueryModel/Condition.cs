@@ -1,5 +1,6 @@
 ﻿namespace Qo.Parsing.QueryModel
 {
+    using Microsoft.SqlServer.TransactSql.ScriptDom;
     using System.Collections.Generic;
 
     /// <summary>
@@ -9,19 +10,17 @@
     public class Condition
     {
         // TODO: Replace with unicode values later.
-        public static readonly Dictionary<ConditionalOperator, string> OperatorMap = new Dictionary<ConditionalOperator, string>
+        public static readonly Dictionary<BooleanComparisonType, string> OperatorMap = new Dictionary<BooleanComparisonType, string>
         {
-            {ConditionalOperator.Equals, "= "},
-            {ConditionalOperator.NotEquals, "!= "},
-            {ConditionalOperator.GreaterThan, "> "},
-            {ConditionalOperator.LessThan, "< "},
-            {ConditionalOperator.GreaterThanOrEqualTo, ">= "},
-            {ConditionalOperator.LessThanOrEqualTo, "<= "},
-            {ConditionalOperator.In, "in "},
-            {ConditionalOperator.Like, "like "}
+            {BooleanComparisonType.Equals, "= "},
+            {BooleanComparisonType.NotEqualToExclamation, "!= "},
+            {BooleanComparisonType.GreaterThan, "> "},
+            {BooleanComparisonType.LessThan, "< "},
+            {BooleanComparisonType.GreaterThanOrEqualTo, ">= "},
+            {BooleanComparisonType.LessThanOrEqualTo, "<= "}
         };
         public dynamic LeftSide { get; set; }
-        public ConditionalOperator Operator { get; set; }
+        public BooleanComparisonType Operator { get; set; }
         public dynamic RightSide { get; set; }
         public int QueryNumber { get; set; }
 
@@ -75,16 +74,5 @@
         {
             return GetSide(LeftSide) + OperatorMap[Operator] + GetSide(RightSide);
         }
-    }
-    public enum ConditionalOperator
-    {
-        Equals,
-        NotEquals,
-        GreaterThan,
-        LessThan,
-        GreaterThanOrEqualTo,
-        LessThanOrEqualTo,
-        In,
-        Like
     }
 }

@@ -34,15 +34,4 @@ namespace Qo.Parsing.QueryModel
             return display;
         }
     }
-
-    public enum FunctionType
-    {
-        Average,
-        Count,
-        Sum,
-        Max,
-        Min,
-        First,
-        Last
-    }
 }

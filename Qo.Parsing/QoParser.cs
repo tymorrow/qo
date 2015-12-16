@@ -89,22 +89,26 @@
                 ProcessQueryExpression(((TSql.SelectStatement)statement).QueryExpression);
         }
 
-        public void ProcessQueryExpression(QueryExpression exp)
+        public dynamic ProcessQueryExpression(QueryExpression exp)
         {            
             if (exp is QuerySpecification) // Actual Select Statement
             {
                 var query = ProcessQuerySpecification(exp as QuerySpecification);
                 _console.WriteLine(query.GetQueryTree().ToString());
+                return query;
             }
             else if (exp is BinaryQueryExpression) // Union
             {
-                
-                ProcessBinaryQueryExpression(exp as BinaryQueryExpression);
+                return ProcessBinaryQueryExpression(exp as BinaryQueryExpression);
             }
             else if (exp is QueryParenthesisExpression) // Select surrounded by paranthesis - sub-select
             {
                 var par = exp as QueryParenthesisExpression;
-                ProcessQueryExpression(par.QueryExpression);
+                return ProcessQueryExpression(par.QueryExpression);
+            }
+            else
+            {
+                throw new Exception("QueryExpression type could not be identified.");
             }
         }
 
@@ -139,18 +143,26 @@
                 _console.WriteLine(string.Empty);
             }
             Debug.Unindent();
+
             _console.WriteLine("WHERE");
             Debug.Indent();
             var whereClauseExpression = spec.WhereClause.SearchCondition;
             if (whereClauseExpression is BooleanBinaryExpression)
             {
                 var whereClause = whereClauseExpression as BooleanBinaryExpression;
-                ProcessBooleanBinaryExpression(whereClause);
+                var tuple = ProcessBooleanBinaryExpression(whereClause);
+                query.Where = new WhereStatement
+                {
+                    Conditions = tuple.Item1,
+                    Operators = tuple.Item2,
+                };
+                
             }
             else if (whereClauseExpression is BooleanComparisonExpression)
             {
                 var whereClause = whereClauseExpression as BooleanComparisonExpression;
-                ProcessBooleanComparisonExpression(whereClause);
+                var condition = ProcessBooleanComparisonExpression(whereClause);
+                query.Where.Conditions.Add(condition);
             }
             else if (whereClauseExpression is BooleanIsNullExpression)
             {
@@ -173,17 +185,18 @@
                 var whereClause = whereClauseExpression as InPredicate;
                 var expression = whereClause.Expression as ColumnReferenceExpression;
                 var subQuery = whereClause.Subquery as ScalarSubquery;
-                ProcessColumnReferenceExpression(expression);
+                var condition = new Condition();
+                condition.LeftSide = ProcessColumnReferenceExpression(expression);
                 _console.WriteLine("IN ");
                 _console.WriteLine("(");
                 Debug.Indent();
                 if (subQuery.QueryExpression is BinaryQueryExpression)
                 {
-                    ProcessQueryExpression(subQuery.QueryExpression);
+                    condition.RightSide = ProcessQueryExpression(subQuery.QueryExpression) as Query;
                 }
                 else if (subQuery.QueryExpression is QuerySpecification)
                 {
-                    ProcessQueryExpression(subQuery.QueryExpression);
+                    condition.RightSide = ProcessQueryExpression(subQuery.QueryExpression) as Query;
                 }
                 else
                 {
@@ -243,15 +256,20 @@
             return query;
         }
 
-        public void ProcessBinaryQueryExpression(BinaryQueryExpression exp)
+        public MultiQuery ProcessBinaryQueryExpression(BinaryQueryExpression exp)
         {
+            var multi = new MultiQuery();
             _console.WriteLine("(");
-            ProcessQueryExpression(exp.FirstQueryExpression);
+            var query1 = ProcessQueryExpression(exp.FirstQueryExpression) as Query;
             _console.WriteLine(")");
             _console.WriteLine(exp.BinaryQueryExpressionType.ToString());
+            var op = exp.BinaryQueryExpressionType;
             _console.WriteLine("(");
-            ProcessQueryExpression(exp.SecondQueryExpression);
+            var query2 = ProcessQueryExpression(exp.SecondQueryExpression) as Query;
             _console.WriteLine(")");
+            var tuple = new Tuple<Query, Query>(query1, query2);
+            multi.Operators.Add(tuple, op);
+            return multi;
         }
 
         public dynamic ProcessColumnReferenceExpression(ColumnReferenceExpression exp)
@@ -278,46 +296,81 @@
             }
         }
 
-        public void ProcessBooleanBinaryExpression(BooleanBinaryExpression exp)
+        public Tuple<List<Condition>, Dictionary<Tuple<Condition,Condition>,BooleanBinaryExpressionType>>
+            ProcessBooleanBinaryExpression(BooleanBinaryExpression exp)
         {
-            if (exp.FirstExpression is BooleanBinaryExpression)
+            if (exp == null) return null;
+            Condition left;
+            Condition right;
+            var conditions = new List<Condition>();
+            var operators = new Dictionary<Tuple<Condition, Condition>, BooleanBinaryExpressionType>();
+            
+            if (exp.FirstExpression is BooleanComparisonExpression)
             {
-                var first = exp.FirstExpression as BooleanBinaryExpression;
-                ProcessBooleanBinaryExpression(first);
+                var leftExp = exp.FirstExpression as BooleanComparisonExpression;
+                left = ProcessBooleanComparisonExpression(leftExp);
+                conditions.Insert(0, left);
             }
-            else if (exp.FirstExpression is BooleanComparisonExpression)
+            else if (exp.FirstExpression is BooleanBinaryExpression)
             {
-                var first = exp.FirstExpression as BooleanComparisonExpression;
-                ProcessBooleanComparisonExpression(first);
+                var leftExp = exp.FirstExpression as BooleanBinaryExpression;
+                var tuple = ProcessBooleanBinaryExpression(leftExp);
+                left = tuple.Item1.Last();
+                foreach (var c in tuple.Item1)
+                {
+                    conditions.Add(c);
+                }
+                foreach (var t in tuple.Item2)
+                {
+                    operators.Add(t.Key, t.Value);
+                }
             }
             else
             {
-
+                throw new Exception();
             }
+
             _console.WriteLine(exp.BinaryExpressionType.ToString());
-            if (exp.SecondExpression is BooleanBinaryExpression)
+            var op = exp.BinaryExpressionType;
+            if (exp.SecondExpression is BooleanComparisonExpression)
             {
-                var second = exp.SecondExpression as BooleanBinaryExpression;
-                ProcessBooleanBinaryExpression(second);
+                var rightExp = exp.SecondExpression as BooleanComparisonExpression;
+                right = ProcessBooleanComparisonExpression(rightExp);
+                var tuple = new Tuple<Condition, Condition>(left, right);
+                //var kvp = new KeyValuePair<Tuple<Condition, Condition>, BooleanBinaryExpressionType>(tuple, op);
+                operators.Add(tuple, op);
+                conditions.Add(right);
             }
-            else if (exp.SecondExpression is BooleanComparisonExpression)
-            {
-                var second = exp.SecondExpression as BooleanComparisonExpression;
-                ProcessBooleanComparisonExpression(second);
-            }
+            //else if (exp.SecondExpression is BooleanBinaryExpression)
+            //{
+            //    var rightExp = exp.SecondExpression as BooleanBinaryExpression;
+            //    var tuple = ProcessBooleanBinaryExpression(rightExp);
+            //    right = tuple.Item1.First();
+            //    foreach (var c in tuple.Item1)
+            //    {
+            //        conditions.Add(c);
+            //    }
+            //    foreach(var t in tuple.Item2)
+            //    {
+            //        operators.Add(t.Key, t.Value);
+            //    }
+            //}
             else
             {
-
+                throw new Exception();
             }
+            return new Tuple<List<Condition>, Dictionary<Tuple<Condition, Condition>, BooleanBinaryExpressionType>>(conditions, operators);
         }
 
-        public void ProcessBooleanComparisonExpression(BooleanComparisonExpression exp)
+        public Condition ProcessBooleanComparisonExpression(BooleanComparisonExpression exp)
         {
-            if (exp == null) return;
-            ProcessScalarExpression(exp.FirstExpression);
+            var condition = new Condition();
+            condition.LeftSide = ProcessScalarExpression(exp.FirstExpression);
             _console.Write(exp.ComparisonType + " ");
-            ProcessScalarExpression(exp.SecondExpression);
+            condition.Operator = exp.ComparisonType;
+            condition.RightSide = ProcessScalarExpression(exp.SecondExpression);
             _console.WriteLine(string.Empty);
+            return condition;
         }
 
         public dynamic ProcessSelectScalarExpression(SelectScalarExpression exp)
@@ -531,7 +584,7 @@
                     if (i == 1)
                     {
                         List<string> leftSplit;
-                        ConditionalOperator leftConditionalOperator;
+                        BooleanComparisonType leftConditionalOperator;
                         dynamic condition1LeftSide;
                         dynamic condition1RightSide;
                         if (conditions[i - 1].Contains(" "))
@@ -561,7 +614,7 @@
                     }
 
                     List<string> rightSplit;
-                    ConditionalOperator rightConditionalOperator;
+                    BooleanComparisonType rightConditionalOperator;
                     dynamic condition2LeftSide;
                     dynamic condition2RightSide;
                     if (conditions[i].Contains(" "))

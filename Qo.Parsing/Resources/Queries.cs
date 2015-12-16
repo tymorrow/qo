@@ -1,5 +1,6 @@
 ﻿namespace Qo.Parsing.Resources
 {
+    using Microsoft.SqlServer.TransactSql.ScriptDom;
     using QueryModel;
     using System;
     using System.Linq;
@@ -12,7 +13,7 @@
     {
         public static MultiQuery GetQueryA(Schema schema)
         {
-            var select = new SelectStatement();
+            var select = new QueryModel.SelectStatement();
             select.Attributes.Add(new Attribute
             {
                 Alias = "s",
@@ -31,18 +32,18 @@
             var condition1 = new Condition
             {
                 LeftSide = new Attribute { Alias = "s", Name = "sid" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = new Attribute { Alias = "r", Name = "sid" }
             };
             var condition2 = new Condition
             {
                 LeftSide = new Attribute { Alias = "r", Name = "bid" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = 103
             };
             where.Conditions.Add(condition1);
             where.Conditions.Add(condition2);
-            where.Operators.Add(new Tuple<Condition, Condition>(condition1, condition2), LogicalOperator.And);
+            where.Operators.Add(new Tuple<Condition, Condition>(condition1, condition2), BooleanBinaryExpressionType.And);
 
             var multiQuery = new MultiQuery();
             var query1 = new Query
@@ -57,7 +58,7 @@
 
         public static MultiQuery GetQueryB(Schema schema)
         {
-            var select = new SelectStatement();
+            var select = new QueryModel.SelectStatement();
             select.Attributes.Add(new Attribute
             {
                 Alias = "s",
@@ -79,26 +80,26 @@
             var condition1 = new Condition
             {
                 LeftSide = new Attribute { Alias = "s", Name = "sid" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = new Attribute { Alias = "r", Name = "sid" }
             };
             var condition2 = new Condition
             {
                 LeftSide = new Attribute { Alias = "r", Name = "bid" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = new Attribute { Alias = "b", Name = "bid" }
             };
             var condition3 = new Condition
             {
                 LeftSide = new Attribute { Alias = "b", Name = "color" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = "red"
             };
             where.Conditions.Add(condition1);
             where.Conditions.Add(condition2);
             where.Conditions.Add(condition3);
-            where.Operators.Add(new Tuple<Condition, Condition>(condition1, condition2), LogicalOperator.And);
-            where.Operators.Add(new Tuple<Condition, Condition>(condition2, condition3), LogicalOperator.And);
+            where.Operators.Add(new Tuple<Condition, Condition>(condition1, condition2), BooleanBinaryExpressionType.And);
+            where.Operators.Add(new Tuple<Condition, Condition>(condition2, condition3), BooleanBinaryExpressionType.And);
 
             var multiQuery = new MultiQuery();
             var query1 = new Query
@@ -113,7 +114,7 @@
 
         public static MultiQuery GetQueryC(Schema schema)
         {
-            var select1 = new SelectStatement();
+            var select1 = new QueryModel.SelectStatement();
             select1.Attributes.Add(new Attribute
             {
                 Alias = "s",
@@ -135,28 +136,28 @@
             var condition1 = new Condition
             {
                 LeftSide = new Attribute { Alias = "s", Name = "sid" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = new Attribute { Alias = "r", Name = "sid" }
             };
             var condition2 = new Condition
             {
                 LeftSide = new Attribute { Alias = "r", Name = "bid" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = new Attribute { Alias = "b", Name = "bid" }
             };
             var condition3 = new Condition
             {
                 LeftSide = new Attribute { Alias = "b", Name = "color" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = "red"
             };
             where1.Conditions.Add(condition1);
             where1.Conditions.Add(condition2);
             where1.Conditions.Add(condition3);
-            where1.Operators.Add(new Tuple<Condition, Condition>(condition1, condition2), LogicalOperator.And);
-            where1.Operators.Add(new Tuple<Condition, Condition>(condition2, condition3), LogicalOperator.And);
+            where1.Operators.Add(new Tuple<Condition, Condition>(condition1, condition2), BooleanBinaryExpressionType.And);
+            where1.Operators.Add(new Tuple<Condition, Condition>(condition2, condition3), BooleanBinaryExpressionType.And);
 
-            var select2 = new SelectStatement();
+            var select2 = new QueryModel.SelectStatement();
             select2.Attributes.Add(new Attribute
             {
                 Alias = "s",
@@ -178,26 +179,26 @@
             var condition4 = new Condition
             {
                 LeftSide = new Attribute { Alias = "s", Name = "sid" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = new Attribute { Alias = "r", Name = "sid" }
             };
             var condition5 = new Condition
             {
                 LeftSide = new Attribute { Alias = "r", Name = "bid" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = new Attribute { Alias = "b", Name = "bid" }
             };
             var condition6 = new Condition
             {
                 LeftSide = new Attribute { Alias = "b", Name = "color" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = "green"
             };
             where2.Conditions.Add(condition4);
             where2.Conditions.Add(condition5);
             where2.Conditions.Add(condition6);
-            where2.Operators.Add(new Tuple<Condition, Condition>(condition4, condition5), LogicalOperator.And);
-            where2.Operators.Add(new Tuple<Condition, Condition>(condition5, condition6), LogicalOperator.And);
+            where2.Operators.Add(new Tuple<Condition, Condition>(condition4, condition5), BooleanBinaryExpressionType.And);
+            where2.Operators.Add(new Tuple<Condition, Condition>(condition5, condition6), BooleanBinaryExpressionType.And);
 
             var multiQuery = new MultiQuery();
             var query1 = new Query
@@ -215,13 +216,13 @@
             };
             multiQuery.Queries.Add(query1);
             multiQuery.Queries.Add(query2);
-            multiQuery.Operators.Add(new Tuple<Query, Query>(query1, query2), SetOperator.Union);
+            multiQuery.Operators.Add(new Tuple<Query, Query>(query1, query2), BinaryQueryExpressionType.Union);
             return multiQuery;
         }
 
         public static MultiQuery GetQueryD(Schema schema)
         {
-            var select = new SelectStatement();
+            var select = new QueryModel.SelectStatement();
             select.Attributes.Add(new Attribute
             {
                 Alias = "s",
@@ -240,35 +241,35 @@
             var condition1 = new Condition
             {
                 LeftSide = new Attribute { Alias = "s", Name = "sid" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = new Attribute { Alias = "r", Name = "sid" }
             };
             var condition2 = new Condition
             {
                 LeftSide = new Attribute { Alias = "r", Name = "bid" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = 100
             };
             var condition3 = new Condition
             {
                 LeftSide = new Attribute { Alias = "s", Name = "rating" },
-                Operator = ConditionalOperator.GreaterThan,
+                Operator = BooleanComparisonType.GreaterThan,
                 RightSide = 5
             };
 
             var condition4 = new Condition
             {
                 LeftSide = new Attribute { Alias = "r", Name = "day" },
-                Operator = ConditionalOperator.GreaterThan,
+                Operator = BooleanComparisonType.GreaterThan,
                 RightSide = "8/9/09"
             };
             where.Conditions.Add(condition1);
             where.Conditions.Add(condition2);
             where.Conditions.Add(condition3);
             where.Conditions.Add(condition4);
-            where.Operators.Add(new Tuple<Condition, Condition>(condition1, condition2), LogicalOperator.And);
-            where.Operators.Add(new Tuple<Condition, Condition>(condition2, condition3), LogicalOperator.And);
-            where.Operators.Add(new Tuple<Condition, Condition>(condition3, condition4), LogicalOperator.And);
+            where.Operators.Add(new Tuple<Condition, Condition>(condition1, condition2), BooleanBinaryExpressionType.And);
+            where.Operators.Add(new Tuple<Condition, Condition>(condition2, condition3), BooleanBinaryExpressionType.And);
+            where.Operators.Add(new Tuple<Condition, Condition>(condition3, condition4), BooleanBinaryExpressionType.And);
 
             var multiQuery = new MultiQuery();
             var query1 = new Query
@@ -283,7 +284,7 @@
 
         public static MultiQuery GetQueryE(Schema schema)
         {
-            var select1 = new SelectStatement();
+            var select1 = new QueryModel.SelectStatement();
             select1.Attributes.Add(new Attribute
             {
                 Alias = "s",
@@ -305,28 +306,28 @@
             var condition1 = new Condition
             {
                 LeftSide = new Attribute { Alias = "s", Name = "sid" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = new Attribute { Alias = "r", Name = "sid" }
             };
             var condition2 = new Condition
             {
                 LeftSide = new Attribute { Alias = "r", Name = "bid" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = new Attribute { Alias = "b", Name = "bid" }
             };
             var condition3 = new Condition
             {
                 LeftSide = new Attribute { Alias = "b", Name = "color" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = "red"
             };
             where1.Conditions.Add(condition1);
             where1.Conditions.Add(condition2);
             where1.Conditions.Add(condition3);
-            where1.Operators.Add(new Tuple<Condition, Condition>(condition1, condition2), LogicalOperator.And);
-            where1.Operators.Add(new Tuple<Condition, Condition>(condition2, condition3), LogicalOperator.And);
+            where1.Operators.Add(new Tuple<Condition, Condition>(condition1, condition2), BooleanBinaryExpressionType.And);
+            where1.Operators.Add(new Tuple<Condition, Condition>(condition2, condition3), BooleanBinaryExpressionType.And);
 
-            var select2 = new SelectStatement();
+            var select2 = new QueryModel.SelectStatement();
             select2.Attributes.Add(new Attribute
             {
                 Alias = "s",
@@ -348,26 +349,26 @@
             var condition4 = new Condition
             {
                 LeftSide = new Attribute { Alias = "s", Name = "sid" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = new Attribute { Alias = "r", Name = "sid" }
             };
             var condition5 = new Condition
             {
                 LeftSide = new Attribute { Alias = "r", Name = "bid" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = new Attribute { Alias = "b", Name = "bid" }
             };
             var condition6 = new Condition
             {
                 LeftSide = new Attribute { Alias = "b", Name = "color" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = "green"
             };
             where2.Conditions.Add(condition4);
             where2.Conditions.Add(condition5);
             where2.Conditions.Add(condition6);
-            where2.Operators.Add(new Tuple<Condition, Condition>(condition4, condition5), LogicalOperator.And);
-            where2.Operators.Add(new Tuple<Condition, Condition>(condition5, condition6), LogicalOperator.And);
+            where2.Operators.Add(new Tuple<Condition, Condition>(condition4, condition5), BooleanBinaryExpressionType.And);
+            where2.Operators.Add(new Tuple<Condition, Condition>(condition5, condition6), BooleanBinaryExpressionType.And);
 
             var multiQuery = new MultiQuery();
             var query1 = new Query
@@ -385,13 +386,13 @@
             };
             multiQuery.Queries.Add(query1);
             multiQuery.Queries.Add(query2);
-            multiQuery.Operators.Add(new Tuple<Query, Query>(query1, query2), SetOperator.Intersect);
+            multiQuery.Operators.Add(new Tuple<Query, Query>(query1, query2), BinaryQueryExpressionType.Intersect);
             return multiQuery;
         }
 
         public static MultiQuery GetQueryF(Schema schema)
         {
-            var select1 = new SelectStatement();
+            var select1 = new QueryModel.SelectStatement();
             select1.Attributes.Add(new Attribute
             {
                 Alias = "s",
@@ -413,28 +414,28 @@
             var condition1 = new Condition
             {
                 LeftSide = new Attribute { Alias = "s", Name = "sid" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = new Attribute { Alias = "r", Name = "sid" }
             };
             var condition2 = new Condition
             {
                 LeftSide = new Attribute { Alias = "r", Name = "bid" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = new Attribute { Alias = "b", Name = "bid" }
             };
             var condition3 = new Condition
             {
                 LeftSide = new Attribute { Alias = "b", Name = "color" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = "red"
             };
             where1.Conditions.Add(condition1);
             where1.Conditions.Add(condition2);
             where1.Conditions.Add(condition3);
-            where1.Operators.Add(new Tuple<Condition, Condition>(condition1, condition2), LogicalOperator.And);
-            where1.Operators.Add(new Tuple<Condition, Condition>(condition2, condition3), LogicalOperator.And);
+            where1.Operators.Add(new Tuple<Condition, Condition>(condition1, condition2), BooleanBinaryExpressionType.And);
+            where1.Operators.Add(new Tuple<Condition, Condition>(condition2, condition3), BooleanBinaryExpressionType.And);
 
-            var select2 = new SelectStatement();
+            var select2 = new QueryModel.SelectStatement();
             select2.Attributes.Add(new Attribute
             {
                 Alias = "s",
@@ -456,26 +457,26 @@
             var condition4 = new Condition
             {
                 LeftSide = new Attribute { Alias = "s", Name = "sid" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = new Attribute { Alias = "r", Name = "sid" }
             };
             var condition5 = new Condition
             {
                 LeftSide = new Attribute { Alias = "r", Name = "bid" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = new Attribute { Alias = "b", Name = "bid" }
             };
             var condition6 = new Condition
             {
                 LeftSide = new Attribute { Alias = "b", Name = "color" },
-                Operator = ConditionalOperator.Equals,
+                Operator = BooleanComparisonType.Equals,
                 RightSide = "green"
             };
             where2.Conditions.Add(condition4);
             where2.Conditions.Add(condition5);
             where2.Conditions.Add(condition6);
-            where2.Operators.Add(new Tuple<Condition, Condition>(condition4, condition5), LogicalOperator.And);
-            where2.Operators.Add(new Tuple<Condition, Condition>(condition5, condition6), LogicalOperator.And);
+            where2.Operators.Add(new Tuple<Condition, Condition>(condition4, condition5), BooleanBinaryExpressionType.And);
+            where2.Operators.Add(new Tuple<Condition, Condition>(condition5, condition6), BooleanBinaryExpressionType.And);
 
             var multiQuery = new MultiQuery();
             var query1 = new Query
@@ -493,7 +494,7 @@
             };
             multiQuery.Queries.Add(query1);
             multiQuery.Queries.Add(query2);
-            multiQuery.Operators.Add(new Tuple<Query, Query>(query1, query2), SetOperator.Except);
+            multiQuery.Operators.Add(new Tuple<Query, Query>(query1, query2), BinaryQueryExpressionType.Except);
             return multiQuery;
         }
     }

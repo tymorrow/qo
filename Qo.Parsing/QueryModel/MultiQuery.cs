@@ -4,27 +4,27 @@
     using System.Collections.Generic;
     using System.Linq;
     using RelationalModel;
-
+    using Microsoft.SqlServer.TransactSql.ScriptDom;
     /// <summary>
     /// Stores one or more queries separated by a SetOperator
     /// </summary>
     public class MultiQuery
     {
-        public static readonly Dictionary<SetOperator, string> OperatorMap = new Dictionary<SetOperator, string>
+        public static readonly Dictionary<BinaryQueryExpressionType, string> OperatorMap = new Dictionary<BinaryQueryExpressionType, string>
         {
-            {SetOperator.Union, "union "},
-            {SetOperator.Intersect, "intersect "},
-            {SetOperator.Except, "except "}
+            {BinaryQueryExpressionType.Union, "union "},
+            {BinaryQueryExpressionType.Intersect, "intersect "},
+            {BinaryQueryExpressionType.Except, "except "}
         };
 
         public List<Query> Queries { get; set; }
 
-        public Dictionary<Tuple<Query, Query>, SetOperator> Operators { get; set; }
+        public Dictionary<Tuple<Query, Query>, BinaryQueryExpressionType> Operators { get; set; }
 
         public MultiQuery()
         {
             Queries = new List<Query>();
-            Operators = new Dictionary<Tuple<Query, Query>, SetOperator>();
+            Operators = new Dictionary<Tuple<Query, Query>, BinaryQueryExpressionType>();
         }
 
         public override string ToString()

@@ -1,5 +1,6 @@
 ﻿namespace Qo.Parsing.QueryModel
 {
+    using Microsoft.SqlServer.TransactSql.ScriptDom;
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -9,19 +10,19 @@
     /// </summary>
     public class WhereStatement
     {
-        public static readonly Dictionary<LogicalOperator, string> OperatorMap = new Dictionary<LogicalOperator, string>
+        public static readonly Dictionary<BooleanBinaryExpressionType, string> OperatorMap = new Dictionary<BooleanBinaryExpressionType, string>
         {
-            {LogicalOperator.And, "and "},
-            {LogicalOperator.Or, "or "}
+            {BooleanBinaryExpressionType.And, "and "},
+            {BooleanBinaryExpressionType.Or, "or "}
         };
 
         public List<Condition> Conditions { get; set; }
-        public Dictionary<Tuple<Condition, Condition>, LogicalOperator> Operators { get; set; }
+        public Dictionary<Tuple<Condition, Condition>, BooleanBinaryExpressionType> Operators { get; set; }
 
         public WhereStatement()
         {
             Conditions = new List<Condition>();
-            Operators = new Dictionary<Tuple<Condition, Condition>, LogicalOperator>();
+            Operators = new Dictionary<Tuple<Condition, Condition>, BooleanBinaryExpressionType>();
         }
         /// <summary>
         /// Converts the WhereStatement to its string representation.
@@ -50,11 +51,5 @@
 
             return output;
         }
-    }
-
-    public enum LogicalOperator
-    {
-        And,
-        Or
     }
 }

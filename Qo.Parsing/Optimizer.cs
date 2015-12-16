@@ -1,5 +1,6 @@
 ﻿namespace Qo.Parsing
 {
+    using Microsoft.SqlServer.TransactSql.ScriptDom;
     using QueryModel;
     using RelationalModel;
     using System;
@@ -465,7 +466,7 @@
             if (!(node.Content is Selection)) return false;
 
             return ((Selection)node.Content).Operators
-                .All(conditionOperator => conditionOperator.Value != LogicalOperator.Or);
+                .All(conditionOperator => conditionOperator.Value != BooleanBinaryExpressionType.Or);
         }
         /// <summary>
         /// Determines if the given attribute is a primary key based on the set schema.

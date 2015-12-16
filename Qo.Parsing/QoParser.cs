@@ -2,6 +2,7 @@
 {
     using Microsoft.SqlServer.TransactSql.ScriptDom;
     using QueryModel;
+    using RelationalModel;
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
@@ -23,6 +24,8 @@
             "except"
         };
         private int _queryCounter;
+        private Node _tree = new Node();
+
         
         public QoParser()
         {
@@ -43,6 +46,7 @@
         public bool Parse(string query)
         {
             var success = false;
+            _tree = new Node();
             try
             {
                 IList<ParseError> errors;
@@ -78,12 +82,7 @@
             
             return success;
         }
-
-        public void NormalizeQuery()
-        {
-
-        }
-
+        
         #region TSqlParser Methods
 
         public void ProcessStatement(TSqlStatement statement)

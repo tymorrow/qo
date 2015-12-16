@@ -13,12 +13,12 @@
     /// Applies query optimization rules on a query tree 
     /// based on a given schema and query tree
     /// </summary>
-    public class QueryOptimizer
+    public class QoOptimizer
     {
         private readonly Schema _schema;
         private string _name;
 
-        public QueryOptimizer(Schema schema)
+        public QoOptimizer(Schema schema)
         {
             _schema = schema;
         }

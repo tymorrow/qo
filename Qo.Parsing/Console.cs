@@ -2,7 +2,7 @@
 {
     using System.Diagnostics;
 
-    public class Console : IConsole
+    internal class Console : IConsole
     {
         public void WriteToConsole(string text)
         {

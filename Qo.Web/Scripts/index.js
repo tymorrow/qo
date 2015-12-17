@@ -22,6 +22,7 @@
         var input = $('#txtSQL').val();
         var formatted = SqlPrettyPrinter.format(input, settings);
         console.log(getSchema());
+
         $.ajax({
             type: "POST",
             url: '/home/submitquery',
@@ -29,6 +30,83 @@
             data: { SqlQuery: input, Tables: getSchema() },
             success: function (result) {
                 console.log(result);
+                console.log(result.RelationalAlgebra);
+                $('#relational-algebra').html(result.RelationalAlgebra);
+
+                // BEGIN BUILDING TREE
+                $('#tree').empty();
+                var width = $("#tree").parent().width();
+                var height = $("#tree").parent().height();
+
+                var cluster = d3.layout.cluster()
+                  .size([height - 500, width - 600]);
+
+                var diagonal = d3.svg.diagonal().projection(function (d) {
+                    return [d.x, d.y];
+                });
+
+                // Set up the svg element where the drawing will go
+                var svg = d3.select("#tree").append("svg")
+                  .attr("width", width)
+                  .attr("height", height)
+                  .append("g")
+                  .attr("transform", "translate(175,40)");
+
+                var nodes = cluster.nodes(result.InitialTree);
+                var links = cluster.links(nodes);
+
+                // Add paths between nodes
+                var link = svg.selectAll(".link")
+                    .data(links)
+                    .enter().append("path")
+                    .attr("class", "link")
+                    .attr("d", diagonal);
+
+                // Add nodes to proper location
+                var node = svg.selectAll(".node")
+                    .data(nodes)
+                    .enter().append("g")
+                    .attr("class", "node")
+                    .attr("transform", function (d) {
+                        return "translate(" + d.x + "," + d.y + ")";
+                    });
+
+                // Append labels and subscripts to nodes
+                node.append("text")
+                    .attr("dy", function (d) {
+                        return 0;
+                    })
+                    .style("text-anchor", function (d) {
+                        return "middle";
+                    })
+                    .style("font-size", function (d) {
+                        return "18";
+                    })
+                    .html(function (d) {
+                        return d.name;
+                    })
+                    .append("tspan")
+                    .style("baseline-shift", function (d) {
+                        return "sub";
+                    })
+                    .html(function (d) {
+                        var output = "";
+                        if (d !== null && d.subscript !== null) {
+                            var splits = d.subscript.split(/( AND | OR )/gi);
+                            for (var s = 0; s < splits.length; s++) {
+                                output += '<tspan style="font-size: 10px" x="0" y="10" dy="'+ (s*5) +'">';
+                                if (s >= splits.length - 1) {
+                                    output += splits[s];
+                                } else if (s < splits.length - 1) {
+                                    output += splits[s] + splits[s + 1];
+                                } 
+                                output += '</tspan>';
+                                s++;
+                            }
+                        }
+                        return output;
+                    });
+                d3.select(self.frameElement).style("height", height + "px");
             },
             error: function (resp) {
                 console.log(resp.responseJSON);
@@ -39,79 +117,6 @@
         prettyPrint('#preFormatted');
         $('#preFormatted').removeClass('prettyprinted');
         window.APPDATA.formatted = formatted;
-
-        //$('#ra-expression').show();
-
-        // BEGIN BUILDING TREE
-        $('#tree').empty();
-        var width = $("#tree").parent().width();
-        var height = $("#tree").parent().height();
-
-        var cluster = d3.layout.cluster()
-          .size([height - 500, width - 600]);
-
-        var diagonal = d3.svg.diagonal()
-          .projection(function (d) {
-              return [d.x, d.y];
-          });
-
-        // Set up the svg element where the drawing will go
-        var svg = d3.select("#tree").append("svg")
-          .attr("width", width)
-          .attr("height", height)
-          .append("g")
-          .attr("transform", "translate(175,40)");
-
-        // Load data from data file (requires simple http server or you'll get an error in the browser)
-        d3.json("data.json", function (error, root) {
-            if (error) throw error;
-
-            var nodes = cluster.nodes(root);
-            var links = cluster.links(nodes);
-
-            // Add paths between nodes
-            var link = svg.selectAll(".link")
-              .data(links)
-              .enter().append("path")
-              .attr("class", "link")
-              .attr("d", diagonal);
-
-            // Add nodes to proper location
-            var node = svg.selectAll(".node")
-              .data(nodes)
-              .enter().append("g")
-              .attr("class", "node")
-              .attr("transform", function (d) {
-                  return "translate(" + d.x + "," + d.y + ")";
-              });
-
-            // Append labels and subscripts to nodes
-            node.append("text")
-              .attr("dy", function (d) {
-                  return 0;
-              })
-              .style("text-anchor", function (d) {
-                  return "middle";
-              })
-              .style("font-size", function (d) {
-                  return "18";
-              })
-              .html(function (d) {
-                  return d.name;
-              })
-              .append("tspan")
-              .attr("baseline-shift", function (d) {
-                  return "sub";
-              })
-              .style("font-size", function (d) {
-                  return "12";
-              })
-              .html(function (d) {
-                  return d.subscript;
-              });
-        });
-
-        d3.select(self.frameElement).style("height", height + "px");
     };
 
     window.clearSql = function () {

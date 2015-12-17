@@ -10,10 +10,10 @@
     /// </summary>
     public class Relation
     {
-        private readonly string AliasSymbol = "\u03c1";
+        static public readonly string AliasSymbol = "\u03c1";
         public List<Attribute> Attributes { get; set; }
         public List<Attribute> PrimaryKey { get; set; }
-        public List<String> Aliases { get; set; }
+        public List<string> Aliases { get; set; }
         public string Name { get; set; }
         public int Priority { get; set; }
 
@@ -24,6 +24,13 @@
             Aliases = new List<string>();
             Name = string.Empty;
         }
+        public Relation(Relation r)
+        {
+            Attributes = r.Attributes;
+            PrimaryKey = r.PrimaryKey;
+            Aliases = new List<string>();
+            Name = r.Name;
+        }
 
         /// <summary>
         /// Converts the Relation to its string representation.
@@ -31,7 +38,7 @@
         public override string ToString()
         {
             if (Aliases.Any())
-                return AliasSymbol + Aliases.First() + " " + Name;
+                return Name + " <sub>" + AliasSymbol + "</sub>" + Aliases.First();
             return Name;
         }
     }

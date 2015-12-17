@@ -1,10 +1,10 @@
 ﻿namespace Qo.Parsing.RelationalModel
 {
-    using System.Globalization;
     using QueryModel;
-    using System;
     using System.Collections.Generic;
-    using Microsoft.SqlServer.TransactSql.ScriptDom;
+    using System.Globalization;
+    using System.Linq;
+
     /// <summary>
     /// Stores dynamic content and references to other nodes.
     /// </summary>
@@ -59,6 +59,43 @@
             Parent = null;
             LeftChild = null;
             RightChild = null;
+        }
+        /// <summary>
+        /// Converts the Node to a CleanNode for display
+        /// </summary>
+        public CleanNode GetCleanNode()
+        {
+            var node = new CleanNode();
+            if(Content is Relation)
+            {
+                var c = Content as Relation;
+                if (c.Aliases.Any())
+                    node.subscript = Relation.AliasSymbol + " " + c.Aliases.First();
+                node.name = c.Name;
+            }
+            else if (Content is Projection)
+            {
+                var c = Content as Projection;
+                node.name = Projection.Symbol;
+                node.subscript = c.GetAttributeString();
+            }
+            else if (Content is Selection)
+            {
+                var c = Content as Selection;
+                node.name = Selection.Symbol;
+                node.subscript = c.GetConditionsString();
+            }
+            else if (Content is SetOperator)
+            {
+                node.name = _setOperatorMap[Content];
+            }
+
+            var children = new List<CleanNode>();
+            if(LeftChild != null) children.Add(LeftChild.GetCleanNode());
+            if(RightChild != null) children.Add(RightChild.GetCleanNode());
+            node.children = children.ToArray();
+
+            return node;
         }
         /// <summary>
         /// Converts the Node to its string representation.

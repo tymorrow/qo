@@ -22,9 +22,9 @@
             }
 
             var qo = new QoParser();
-            var success = qo.Parse(model.SqlQuery);
+            var package = qo.Parse(model.SqlQuery);
             
-            return Json(success, JsonRequestBehavior.AllowGet);
+            return Json(package, JsonRequestBehavior.AllowGet);
         } 
 
     }

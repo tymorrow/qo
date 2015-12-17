@@ -12,6 +12,7 @@
     /// </summary>
     public class Selection
     {
+        static public readonly string Symbol = "\u03C3";
         private readonly Dictionary<BooleanBinaryExpressionType, string> _operatorMap = new Dictionary<BooleanBinaryExpressionType, string>
         {
             {BooleanBinaryExpressionType.And, " AND "},
@@ -35,14 +36,18 @@
             var output = string.Empty;
 
             if (!Conditions.Any()) return output;
+            
+            return Symbol + " " + GetConditionsString() + " ";
+        }
 
-            output = "\u03C3 ";
-
+        public string GetConditionsString()
+        {
+            var output = string.Empty;
             if (Conditions.Count == 1)
             {
                 output += Conditions.First();
             }
-            else
+            else if (Conditions.Count >= 2)
             {
                 output += Conditions[0].ToString();
                 for (var i = 1; i < Conditions.Count; i++)
@@ -53,9 +58,9 @@
                     output += op + condition2;
                 }
             }
-
-            return output + " ";
+            return output;
         }
+
         /// <summary>
         /// Swaps each pair of Conditions in the store Conditions list.
         /// </summary>

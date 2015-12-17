@@ -43,6 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="RelationalModel\CleanNode.cs" />
     <Compile Include="Console.cs" />
     <Compile Include="IConsole.cs" />
     <Compile Include="Optimizer.cs" />

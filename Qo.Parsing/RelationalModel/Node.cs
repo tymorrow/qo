@@ -1,5 +1,6 @@
 ﻿namespace Qo.Parsing.RelationalModel
 {
+    using Microsoft.SqlServer.TransactSql.ScriptDom;
     using QueryModel;
     using System.Collections.Generic;
     using System.Globalization;
@@ -84,6 +85,12 @@
                 var c = Content as Selection;
                 node.name = Selection.Symbol;
                 node.subscript = c.GetConditionsString();
+            }
+            else if (Content is Join)
+            {
+                var c = Content as Join;
+                node.name = Join.Symbol;
+                node.subscript = c.Condition.ToString();
             }
             else if (Content is SetOperator)
             {

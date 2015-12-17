@@ -17,8 +17,11 @@
     public class QoOptimizer
     {
         private readonly Schema _schema;
-        private string _name;
 
+        public QoOptimizer()
+        {
+            _schema = Resources.Schemas.GetSchema1();
+        }
         public QoOptimizer(Schema schema)
         {
             _schema = schema;
@@ -28,52 +31,47 @@
         /// Applies all query optimization rules on a query tree 
         /// and outputs the Graphviz files after each optimization.
         /// </summary>
-        public void Run(Node queryTree, string name)
+        public void Run(QoPackage package)
         {
-            _name = name;
-            GenerateGraph(queryTree, name + "Op0");
-            if (queryTree.Content is SetOperator)
+            var tree = package.Tree;
+            if (tree.Content is SetOperator)
             {
-                ApplyOptimizationRule1(queryTree.LeftChild);
-                ApplyOptimizationRule1(queryTree.RightChild);
-                GenerateGraph(queryTree, name + "Op1");
-
-                ApplyOptimizationRule2(queryTree.LeftChild);
-                ApplyOptimizationRule2(queryTree.RightChild);
-                GenerateGraph(queryTree, name + "Op2");
-
-                ApplyOptimizationRule3(queryTree.LeftChild);
-                ApplyOptimizationRule3(queryTree.RightChild);
-                GenerateGraph(queryTree, name + "Op3");
-
-                ApplyOptimizationRule4(queryTree.LeftChild);
-                ApplyOptimizationRule4(queryTree.RightChild);
-                GenerateGraph(queryTree, name + "Op4");
-
-                ApplyOptimizationRule5(queryTree.LeftChild);
-                ApplyOptimizationRule5(queryTree.RightChild);
-                GenerateGraph(queryTree, name + "Op5");
+                ApplyRule1(tree.LeftChild);
+                ApplyRule1(tree.RightChild);
+                package.Optimization1 = tree.GetCleanNode();
+                ApplyRule2(tree.LeftChild);
+                ApplyRule2(tree.RightChild);
+                package.Optimization2 = tree.GetCleanNode();
+                //ApplyRule3(tree.LeftChild);
+                //ApplyRule3(tree.RightChild);
+                package.Optimization3 = tree.GetCleanNode();
+                //ApplyRule4(tree.LeftChild);
+                //ApplyRule4(tree.RightChild);
+                //package.Optimization4 = tree.GetCleanNode();
+                //ApplyRule5(tree.LeftChild);
+                //ApplyRule5(tree.RightChild);
+                //package.Optimization5 = tree.GetCleanNode();
             }
             else
             {
-                ApplyOptimizationRule1(queryTree);
-                GenerateGraph(queryTree, name + "Op1");
-                ApplyOptimizationRule2(queryTree);
-                GenerateGraph(queryTree, name + "Op2");
-                ApplyOptimizationRule3(queryTree);
-                GenerateGraph(queryTree, name + "Op3");
-                ApplyOptimizationRule4(queryTree);
-                GenerateGraph(queryTree, name + "Op4");
-                ApplyOptimizationRule5(queryTree);
-                GenerateGraph(queryTree, name + "Op5");
+                ApplyRule1(tree);
+                package.Optimization1 = tree.GetCleanNode();
+                ApplyRule2(tree);
+                package.Optimization2 = tree.GetCleanNode();
+                //ApplyRule3(tree);
+                package.Optimization3 = tree.GetCleanNode();
+                //ApplyRule4(tree);
+                package.Optimization4 = tree.GetCleanNode();
+                //ApplyRule5(tree);
+                package.Optimization5 = tree.GetCleanNode();
             }
 
-            ApplyOptimizationRule6(queryTree);
+            ApplyRule6(tree);
         }
         /// <summary>
         /// Breaks up conjunctive conditions of a selection into a cascade.
         /// </summary>
-        private void ApplyOptimizationRule1(Node root)
+        private void ApplyRule1(Node root)
         {
             var selectionNodes = GetAllSelectionNodes(root);
             foreach (var node in selectionNodes)
@@ -101,113 +99,270 @@
             }
         }
         /// <summary>
-        /// Moves selections close to their relations as possible.
+        /// Moves selections as close to their relations as possible.
         /// </summary>
-        private void ApplyOptimizationRule2(Node root)
+        private void ApplyRule2(Node root)
         {
             var treeNodes = GetNodesList(root);
-            var treeRelations = treeNodes.Where(n => n.Content is Relation).ToList();
+            var treeRelations = treeNodes.Where(n => n.Content is Relation);
             var selectionNodes = GetAllSelectionNodes(root);
+            var joinNodes = selectionNodes.Where(n => IsJoinCondition((n.Content as Selection).Conditions.First()));
+            if(joinNodes.Any())
+            {
+                var cartRankings = new Dictionary<Node, int>();
+                foreach (var n in treeRelations)
+                {
+                    cartRankings.Add(n, 0);
+                }
+                foreach (var n in joinNodes)
+                {
+                    var relation1 = GetRelationForAttribute((n.Content as Selection).Conditions.First().LeftSide as Attribute, treeRelations);
+                    var relation2 = GetRelationForAttribute((n.Content as Selection).Conditions.First().RightSide as Attribute, treeRelations);
+                    cartRankings[relation1]++;
+                    cartRankings[relation2]++;
+                }
+                var firstCart = GetFirstCartesian(root);
+                var iter = firstCart;
+                var orderedRelations = cartRankings.OrderBy(o => o.Value).Select(n => n.Key);
+                for(int i = 0; i < orderedRelations.Count() - 1; i++)
+                {
+                    if (i == orderedRelations.Count() - 2)
+                    {
+                        var ele1 = orderedRelations.ElementAt(i);
+                        var ele2 = orderedRelations.ElementAt(i+1);
+                        iter.RightChild = ele1;
+                        ele1.Parent = iter;
+                        iter.LeftChild = ele2;
+                        ele2.Parent = iter;
+                    }
+                    else
+                    {
+                        var ele = orderedRelations.ElementAt(i);
+                        iter.RightChild = ele;
+                        iter = iter.LeftChild;
+                        ele.Parent = iter;
+                    }
+                }
+            }
 
             // Bury the selection nodes within the query tree as deeply as possible.
-            foreach (var node in selectionNodes)
-            {
-                var condition = ((Selection) node.Content).Conditions.First();
-                var leftRelation = (Node)GetRelationForAttribute(condition.LeftSide, treeRelations);
-                if (leftRelation == null) continue;
-                var isJoinCondition = IsJoinCondition(condition);
+            //foreach (var node in selectionNodes)
+            //{
+            //    var selection = node.Content as Selection;
+            //    var condition = selection.Conditions.First();
+            //    var isJoin = IsJoinCondition(condition);
 
-                // Reposition surrounding nodes
-                node.Parent.LeftChild = node.LeftChild;
-                node.LeftChild.Parent = node.Parent;
-                if (isJoinCondition)
-                {
-                    var rightRelation = (Node)GetRelationForAttribute(condition.RightSide, treeRelations);
+            //    // Reposition surrounding nodes
+            //    node.Parent.LeftChild = node.LeftChild;
+            //    node.LeftChild.Parent = node.Parent;
+            //    if (isJoin)
+            //    {
+            //        var relation1 = GetRelationForAttribute(condition.LeftSide as Attribute, treeRelations);
+            //        var relation2 = GetRelationForAttribute(condition.RightSide as Attribute, treeRelations);
+            //        var iter = node.LeftChild;
+            //        while(!ContainsRelation(iter.LeftChild, relation1.Content as Relation) && 
+            //            !ContainsRelation(iter.RightChild, relation2.Content as Relation))
+            //        {
+            //            iter = iter.LeftChild;
+            //        }
 
-                    // Resposition node
-                    node.Parent = rightRelation.Parent.Parent;
-                    node.LeftChild = rightRelation.Parent;
+            //        iter.Parent.LeftChild = node;
+            //        node.Parent = iter.Parent;
+            //        node.LeftChild = iter;
+            //        iter.Parent = node;
+            //    }
+            //    else
+            //    {
+            //        var relation1 = GetRelationForAttribute(condition.LeftSide as Attribute, treeRelations);
+            //        var relation2 = GetRelationForAttribute(condition.RightSide as Attribute, treeRelations);
 
-                    while (node.LeftChild.RightChild != rightRelation &&
-                            node.LeftChild.RightChild != leftRelation)
-                    {
-                        node.Parent = node.Parent.Parent;
-                        node.LeftChild = node.Parent.LeftChild;
-                    }
-                    node.Parent.LeftChild = node;
-                    node.LeftChild.Parent = node;
-                    continue;
-                }
-
-                // Reposition node
-                node.Parent = leftRelation.Parent;
-                node.LeftChild = leftRelation;
-
-                if (node.Parent.LeftChild == leftRelation)
-                {
-                    node.Parent.LeftChild = node;
-                }
-                else
-                {
-                    node.Parent.RightChild = node;
-                }
-
-                node.LeftChild.Parent = node;
-            }
+            //        if(relation1 != null)
+            //        {
+            //            if (relation1.Parent.LeftChild == relation1)
+            //            {
+            //                relation1.Parent.LeftChild = node;
+            //            }
+            //            else
+            //            {
+            //                relation1.Parent.RightChild = node;
+            //            }
+            //            node.Parent = relation1.Parent;
+            //            relation1.Parent = node;
+            //            node.LeftChild = relation1;
+            //        }
+            //        else if(relation2 != null)
+            //        {
+            //            if (relation2.Parent.LeftChild == relation2)
+            //            {
+            //                relation2.Parent.LeftChild = node;
+            //            }
+            //            else
+            //            {
+            //                relation2.Parent.RightChild = node;
+            //            }
+            //            node.Parent = relation2.Parent;
+            //            relation2.Parent = node;
+            //            node.LeftChild = relation2;
+            //        }
+            //    }
+            //}
         }
         /// <summary>
         /// Moves non-Join selection conditions to the left side of the tree.
         /// </summary>
-        private void ApplyOptimizationRule3(Node root)
+        private void ApplyRule3(Node root)
         {
-            var nodesInTree = GetNodesList(root);
-            var treeRelations = nodesInTree.Where(n => n.Content is Relation).ToList();
-            var treeSelections = nodesInTree.Where(n => n.Content is Selection).ToList();
-
-            foreach (var node in treeSelections)
+            var rootCart = root;
+            // Find uppermost cartesian product node.
+            while(!(rootCart.Content is SetOperator))
             {
-                var containsJoinCondition = ContainsJoinCondition(((Selection)node.Content).Conditions);
-                if (containsJoinCondition == null || containsJoinCondition == true) continue;
-                if (GetAllCartesianProductNodes(root).Count == 1)
+                rootCart = rootCart.LeftChild;
+            }
+            var iter = rootCart;
+            // Move heaviest selects to bottom left
+            while(!(iter.Content is Relation))
+            {
+                if (iter.Content is SetOperator)
                 {
-                    if (!(node.Parent.Content is SetOperator)) continue;
+                    if(iter.Parent.Content is Selection)
+                    {
+                        if(iter.LeftChild.Content is Selection && 
+                           !(iter.LeftChild.LeftChild.Content is Selection) &&
+                           !(iter.LeftChild.LeftChild.Content is Relation)) // It's another cartesian
+                        {
+                            var leftRank = GetRestrictiveWeight(iter.LeftChild);
+                            var leftLeftRank = GetRestrictiveWeight(iter.LeftChild.LeftChild.LeftChild);
+                            var leftRightRank = GetRestrictiveWeight(iter.LeftChild.LeftChild.RightChild);
+                            var rightRank = GetRestrictiveWeight(iter.RightChild);
 
-                    var cartesianNode = node.Parent;
+                            if (leftLeftRank < rightRank)
+                            {
+                                var select1 = iter.Parent;
+                                var select1Parent = iter.Parent.Parent;
+                                var select2 = iter.LeftChild;
+                                var cart1 = iter;
+                                var cart2 = iter.LeftChild.LeftChild;
 
-                    if (cartesianNode.RightChild != node) continue;
-
-                    cartesianNode.RightChild = cartesianNode.LeftChild;
-                    cartesianNode.LeftChild = node;
-                    ((Selection)cartesianNode.Parent.Content).SwapOperators();
+                                cart1.LeftChild = cart1.RightChild;
+                                cart1.RightChild = cart2.RightChild;
+                                cart2.RightChild.Parent = cart1.RightChild;
+                                select1.Parent = cart2;                                
+                                cart2.RightChild = cart2.LeftChild;
+                                cart2.LeftChild = select1;
+                                select2.Parent = iter.Parent.Parent;
+                            }
+                        }
+                        else // Might not handle full cartesians properly here.
+                        {
+                            SwapOnRank(iter);
+                        }
+                    }
+                    else
+                    {
+                        SwapOnRank(iter);
+                    }
                 }
-                else
-                {
-                    var joinCondition = ((Selection)node.Parent.Parent.Content).Conditions.First();
-                    var leftRelationNode = (Node)GetRelationForAttribute(joinCondition.LeftSide, treeRelations);
-                    var rightRelationNode = (Node)GetRelationForAttribute(joinCondition.RightSide, treeRelations);
-                    var leftJoinNode = GetParentalJoinNode(leftRelationNode);
-                    var rightJoinNode = GetParentalJoinNode(rightRelationNode);
-
-                    // Point the parent of the right relation join node at the left relation's join node
-                    rightJoinNode.Parent.LeftChild = leftJoinNode;
-                    leftJoinNode.Parent = rightJoinNode.Parent;
-                    rightJoinNode.LeftChild.LeftChild = rightJoinNode.LeftChild.RightChild;
-                    rightJoinNode.LeftChild.RightChild = leftRelationNode;
-                    leftRelationNode.Parent = rightJoinNode.LeftChild;
-                    leftJoinNode.LeftChild.RightChild = leftJoinNode.LeftChild.LeftChild;
-                    leftJoinNode.LeftChild.LeftChild = rightJoinNode;
-                    rightJoinNode.Parent = leftJoinNode.LeftChild;
-
-                    // Swap attributes join conditions
-                    ((Selection)rightJoinNode.Content).SwapOperators();
-                    ((Selection)leftJoinNode.Content).SwapOperators();
-                }
+                iter = iter.LeftChild;
             }
         }
+
+        private void SwapOnRank(Node node)
+        {
+            var leftRank = GetRestrictiveWeight(node.LeftChild);
+            var rightRank = GetRestrictiveWeight(node.RightChild);
+            if (leftRank < rightRank)
+            {
+                var temp = node.LeftChild;
+                node.LeftChild = node.RightChild;
+                node.RightChild = temp;
+            }
+        }
+
+        private bool ContainsRelation(Node node, Relation relation)
+        {
+            if (node == null) return false;
+            var result = false;
+
+            if (node.Content is Relation &&
+                    (node.Content as Relation == relation)) return true;
+
+            if (node.LeftChild != null)
+            {
+                result = ContainsRelation(node.LeftChild, relation);
+            }
+            if (node.RightChild != null && !result)
+            {
+                result = ContainsRelation(node.RightChild, relation);
+            }
+
+            return result;
+        }
+
+        private Node GetFirstCartesian(Node node)
+        {
+            var iter = node;
+            while(iter != null && !(iter.Content is SetOperator))
+            {
+                iter = iter.LeftChild;
+            }
+            return node;
+        }
+
+        /// <summary>
+        /// Counts a nodes weight down to relation
+        /// </summary>
+        public static int GetRestrictiveWeight(Node node)
+        {
+            var count = 0;
+            if (node.Content is SetOperator)
+            {
+                count += GetRestrictiveWeight(node.LeftChild);
+                count += GetRestrictiveWeight(node.RightChild);
+            }
+            else if (node.Content is Selection)
+            {
+                var s = node.Content as Selection;
+                // Add weight
+                foreach (var con in s.Conditions)
+                {
+                    if (con.Operator == BooleanComparisonType.Equals ||
+                       con.Operator == BooleanComparisonType.NotEqualToExclamation)
+                    {
+                        count += 1;
+                    }
+                    count += 1;
+                }
+                count += GetRestrictiveWeight(node.LeftChild);
+            }
+            else if (node.Content is Projection)
+            {
+                count += GetRestrictiveWeight(node.LeftChild);
+            }
+            else if (node.Content is Relation)
+            {
+                count = 0;
+            }
+            return count;
+        }
+
+        private Node GetAdjoiningSelect(Node r)
+        {
+            var node = r;
+            while(!(node.Content is SetOperator))
+            {
+                node = node.Parent;
+            }
+            if(node.Parent.Content is Selection)
+            {
+                return node.Parent;
+            }
+            return node;
+        }
+
         /// <summary>
         /// Replaces Cartesian products with join operator.
         /// </summary>
-        private void ApplyOptimizationRule4(Node root)
+        private void ApplyRule4(Node root)
         {
             var cartesianNodes = GetAllCartesianProductNodes(root);
 
@@ -231,7 +386,7 @@
         /// <summary>
         /// Moves attribute projections as close as possible to their associated Relation.
         /// </summary>
-        private void ApplyOptimizationRule5(Node root)
+        private void ApplyRule5(Node root)
         {
             var nodesInTree = GetNodesList(root);
             var treeRelations = nodesInTree.Where(n => n.Content is Relation).ToList();
@@ -254,6 +409,7 @@
                         var intersection = new List<Attribute>();
                         foreach (var attribute in allParentalAttributes)
                         {
+                            if (!(attribute is Attribute)) continue;
                             foreach (var availableAttribute in availableAttributes)
                             {
                                 if (attribute.Name == availableAttribute.Name &&
@@ -293,14 +449,14 @@
         /// Identifies all subtrees that represent groups of operations that 
         /// can be executed by a single algorithm
         /// </summary>
-        private void ApplyOptimizationRule6(Node root)
+        private void ApplyRule6(Node root)
         {
             var projectionNodes = GetAllProjectionNodes(root, root);
 
             var counter = 1;
             foreach (var node in projectionNodes)
             {
-                GenerateGraph(node, _name + "OP6subgraph" + counter);
+                GenerateGraph(node, "OP6subgraph" + counter);
                 counter++;
             }
         }
@@ -490,18 +646,32 @@
         /// </summary>
         private Node GetRelationForAttribute(Attribute attribute, IEnumerable<Node> relations)
         {
-            foreach (var relation in relations)
+            if (attribute == null) return null;
+            if (relations.Count() == 1) return relations.First();
+            foreach (var r in relations)
             {
-                if (((Relation)relation.Content).Aliases[attribute.QueryNumber] == attribute.Alias)
+                var relation = r.Content as Relation;
+                if(relation.Aliases.Any())
                 {
-                    foreach (var relationAttribute in ((Relation)relation.Content).Attributes)
+                    foreach (var att in relation.Attributes)
                     {
-                        if (relationAttribute.Name == attribute.Name)
+                        if (att.Name == attribute.Name && relation.Aliases.Contains(attribute.Alias))
                         {
-                            return relation;
+                            return r;
                         }
                     }
                 }
+                else
+                {
+                    foreach (var att in relation.Attributes)
+                    {
+                        if (att.Name == attribute.Name && attribute.Alias == relation.Name)
+                        {
+                            return r;
+                        }
+                    }
+                }
+
             }
             return null;
         }
@@ -547,6 +717,7 @@
         /// </summary>
         public Node GetParentalJoinNode(Node node)
         {
+            if (node == null) return null;
             var iterator = node.Parent;
             var nodeFound = false;
             do

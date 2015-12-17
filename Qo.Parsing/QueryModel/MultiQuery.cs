@@ -62,12 +62,15 @@
             if (Queries.Count == 1)
             {
                 root = ConvertQueryToNode(Queries[0]);
+                root.LeftChild.Parent = root;
             }
             else if (Queries.Count >= 2)
             {
                 root.Content = Operators.First().Value;
                 root.LeftChild = ConvertQueryToNode(Queries[0]);
+                root.LeftChild.Parent = root;
                 root.RightChild = ConvertQueryToNode(Queries[1]);
+                root.RightChild.Parent = root;
             }
 
             return root;
@@ -86,7 +89,9 @@
                 var mq = query as MultiQuery;
                 node.Content = mq.Operators.First().Value;
                 node.LeftChild = ConvertQueryToNode(mq.Queries[0]);
+                node.LeftChild.Parent = node;
                 node.RightChild = ConvertQueryToNode(mq.Queries[1]);
+                node.RightChild.Parent = node;
                 return node;
             }
             return new Node();

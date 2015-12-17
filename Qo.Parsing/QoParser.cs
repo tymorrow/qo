@@ -15,14 +15,12 @@
     {
         private readonly IConsole _console;
         private readonly Schema _schema;
-        private string _lastQueryString;
         private readonly List<string> _setOperators = new List<string>
         {
             "union",
             "intersect",
             "except"
         };
-        private int _queryCounter;
         
         public QoParser()
         {
@@ -70,16 +68,16 @@
                     if(result is Query)
                     {
                         var unboxedResult = result as Query;
-                        var tree = unboxedResult.GetQueryTree();
-                        package.RelationalAlgebra = tree.ToString();
-                        package.InitialTree = tree.GetCleanNode();
+                        package.Tree = unboxedResult.GetQueryTree();
+                        package.RelationalAlgebra = package.Tree.ToString();
+                        package.InitialTree = package.Tree.GetCleanNode();
                     }
                     if(result is MultiQuery)
                     {
                         var unboxedResult = result as MultiQuery;
-                        var tree = unboxedResult.GetQueryTree();
-                        package.RelationalAlgebra = tree.ToString();
-                        package.InitialTree = tree.GetCleanNode();
+                        package.Tree = unboxedResult.GetQueryTree();
+                        package.RelationalAlgebra = package.Tree.ToString();
+                        package.InitialTree = package.Tree.GetCleanNode();
                     }
                     package.Success = true;
                 }
@@ -604,13 +602,5 @@
         }
 
         #endregion
-    }
-
-    public class QoPackage
-    {
-        public bool Success { get; set; }
-        public string Error { get; set; }
-        public string RelationalAlgebra { get; set; }
-        public CleanNode InitialTree { get; set; }
     }
 }

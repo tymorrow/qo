@@ -16,6 +16,7 @@
         public List<string> Aliases { get; set; }
         public string Name { get; set; }
         public int Priority { get; set; }
+        public int TupleCount { get; set; }
 
         public Relation()
         {

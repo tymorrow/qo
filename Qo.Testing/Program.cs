@@ -8,15 +8,20 @@
         static void Main(string[] args)
         {
             var sqlQuery = @"
-SELECT S.sname
-FROM Sailors AS S
-WHERE S.age > (SELECT MAX (S2.age)
-FROM Sailors S2
-WHERE S2.rating = 10)
+SELECT sname
+FROM Sailors, Boats, Reserves
+WHERE Sailors.sid=Reserves.sid AND Reserves.bid=Boats.bid AND Boats.color=’red’
+INTERSECT
+SELECT sname
+FROM Sailors, Boats, Reserves
+WHERE Sailors.sid=Reserves.sid AND Reserves.bid=Boats.bid AND
+Boats.color=’green’
             ";
             
             var qoParser = new QoParser();
-            qoParser.Parse(sqlQuery.Trim());
+            var qoOptimizer = new QoOptimizer();
+            var package = qoParser.Parse(sqlQuery.Trim());
+            qoOptimizer.Run(package);
 
             Console.ReadKey();
         }

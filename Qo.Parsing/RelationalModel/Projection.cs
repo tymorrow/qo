@@ -36,8 +36,10 @@
                     var a = Attributes[i] as Function;
                     output += a.ToString();
                 }
-                if (i < Attributes.Count - 1 && i + 1 < Attributes.Count)
-                    output = output.Insert(output.Length - 1, ",");
+                if (i < Attributes.Count - 1)
+                {
+                    output += ", ";
+                }
             }
             return output;
         }

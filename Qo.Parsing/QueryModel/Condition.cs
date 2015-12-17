@@ -57,11 +57,13 @@
             }
             if (side is Attribute)
             {
-                return side.ToString();
+                var s = side as Attribute;
+                return s.ToString();
             }
             if (side is Function)
             {
-                return side.ToString();
+                var s = side as Function;
+                return s.ToString();
             }
             return " ";
         }
@@ -75,11 +77,13 @@
 
             if (LeftSide is Attribute)
             {
-                result.Add(LeftSide);
+                var s = LeftSide as Attribute;
+                result.Add(s);
             }
             if (RightSide is Attribute)
             {
-                result.Add(RightSide);
+                var s = RightSide as Attribute;
+                result.Add(s);
             }
 
             return result;

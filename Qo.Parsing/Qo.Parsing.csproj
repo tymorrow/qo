@@ -43,10 +43,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="QoPackage.cs" />
     <Compile Include="RelationalModel\CleanNode.cs" />
     <Compile Include="Console.cs" />
     <Compile Include="IConsole.cs" />
-    <Compile Include="Optimizer.cs" />
+    <Compile Include="QoOptimizer.cs" />
     <Compile Include="QueryModel\Function.cs" />
     <Compile Include="QueryModel\Attribute.cs" />
     <Compile Include="QueryModel\Condition.cs" />

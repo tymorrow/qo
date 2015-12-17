@@ -5,6 +5,7 @@
     /// </summary>
     public class Join
     {
+        static public readonly string Symbol = "\u2A1D";
         public Condition Condition { get; set; }
 
         public Join()
@@ -17,7 +18,7 @@
         /// </summary>
         public override string ToString()
         {
-            return "\u2A1D " + Condition;
+            return Symbol + " " + Condition;
         }
     }
 }

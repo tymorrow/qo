@@ -21,12 +21,13 @@
                 return Json("No query was received!", JsonRequestBehavior.AllowGet);
             }
 
-            var qo = new QoParser();
-            var package = qo.Parse(model.SqlQuery);
+            var qoParser = new QoParser();
+            var qoOptimizer = new QoOptimizer();
+            var package = qoParser.Parse(model.SqlQuery);
+            qoOptimizer.Run(package);
             
             return Json(package, JsonRequestBehavior.AllowGet);
         } 
-
     }
 
     public class QoPackage

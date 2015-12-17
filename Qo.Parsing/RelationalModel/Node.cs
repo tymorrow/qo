@@ -4,19 +4,20 @@
     using QueryModel;
     using System;
     using System.Collections.Generic;
-
+    using Microsoft.SqlServer.TransactSql.ScriptDom;
     /// <summary>
     /// Stores dynamic content and references to other nodes.
     /// </summary>
     public class Node
     {
         private static int _idCounter;
-        private readonly Dictionary<SetOperator, string> _operatorMap = new Dictionary<SetOperator, string>
+        private readonly Dictionary<SetOperator, string> _setOperatorMap = new Dictionary<SetOperator, string>
         {
-            {SetOperator.CartesianProduct, "\u00D7"},
-            {SetOperator.Union, "\u222A"},
-            {SetOperator.Intersect, "\u2229"},
-            {SetOperator.Except, "\u002D"},
+            {SetOperator.CartesianProduct, " \u00D7 "},
+            {SetOperator.Union, " \u222A "},
+            {SetOperator.Intersect, " \u2229 "},
+            {SetOperator.Except, " \u002D "},
+            {SetOperator.Division, " \u00F7 "}
         };
 
         public Node Parent { get; set; }
@@ -38,7 +39,7 @@
         {
             if (Content == null) return string.Empty;
 
-            if (Content is SetOperator) return _operatorMap[Content];
+            if (Content is SetOperator) return _setOperatorMap[Content];
 
             return Content.ToString();
         }
@@ -72,6 +73,14 @@
             {
                 output = LeftChild.ToString();
             }
+            if (Content is int)
+            {
+                output = Content.ToString();
+            }
+            if (Content is double)
+            {
+                output = Content.ToString();
+            }
             if (Content is Relation)
             {
                 output = Content.ToString();
@@ -86,7 +95,11 @@
             }
             else if (Content is SetOperator)
             {
-                output = "(" + LeftChild + _operatorMap[Content] + RightChild + ")";
+                output = "(" + LeftChild + _setOperatorMap[Content] + RightChild + ")";
+            }
+            else if (Content is Query)
+            {
+                output = Content.ToString();
             }
 
             return output;

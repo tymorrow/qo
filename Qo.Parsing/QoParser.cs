@@ -15,7 +15,6 @@
     {
         private readonly IConsole _console;
         private readonly Schema _schema;
-        IList<TSqlParserToken> _tokens;
         private string _lastQueryString;
         private readonly List<string> _setOperators = new List<string>
         {
@@ -46,6 +45,8 @@
         {
             var success = false;
             _tree = new Node();
+            // Sanitize original query string
+            query = query.Replace("’", "'").Replace("`", "'").Replace("‘", "'");
             try
             {
                 IList<ParseError> errors;
@@ -66,7 +67,21 @@
                 {
                     var batch = script.Batches.First();
                     var statement = batch.Statements.First();
-                    ProcessStatement(statement);
+                    var result = ProcessStatement(statement);
+                    if(result is Query)
+                    {
+                        var unboxedResult = result as Query;
+                        var queryTree = unboxedResult.GetQueryTree();
+                        var ra = queryTree.ToString();
+                        _console.WriteLine(ra);
+                    }
+                    if(result is MultiQuery)
+                    {
+                        var unboxedResult = result as MultiQuery;
+                        var queryTree = unboxedResult.GetQueryTree();
+                        var ra = queryTree.ToString();
+                        _console.WriteLine(ra);
+                    }
                     success = true;
                 }
             }
@@ -80,28 +95,27 @@
         
         #region TSqlParser Methods
 
-        public void ProcessStatement(TSqlStatement statement)
+        public dynamic ProcessStatement(TSqlStatement statement)
         {
             // Could be Stored Procedure, While, or If but for this project, we're not expecting those.
             // if(statement is TSql.WhileStatement)
             //     ProcessStatements(((TSql.WhileStatement)statement).Statement);
             if (statement is TSql.SelectStatement)
-                ProcessQueryExpression(((TSql.SelectStatement)statement).QueryExpression);
+                return ProcessQueryExpression(((TSql.SelectStatement)statement).QueryExpression);
+            return null;
         }
 
         public dynamic ProcessQueryExpression(QueryExpression exp)
         {            
-            if (exp is QuerySpecification) // Actual Select Statement
+            if (exp is QuerySpecification) // Actual SELECT Statement
             {
-                var query = ProcessQuerySpecification(exp as QuerySpecification);
-                _console.WriteLine(query.GetQueryTree().ToString());
-                return query;
+                return ProcessQuerySpecification(exp as QuerySpecification);
             }
-            else if (exp is BinaryQueryExpression) // Union
+            else if (exp is BinaryQueryExpression) // UNION, INTERSECT, EXCEPT
             {
                 return ProcessBinaryQueryExpression(exp as BinaryQueryExpression);
             }
-            else if (exp is QueryParenthesisExpression) // Select surrounded by paranthesis - sub-select
+            else if (exp is QueryParenthesisExpression) // SELECT statement surrounded by paranthesis
             {
                 var par = exp as QueryParenthesisExpression;
                 return ProcessQueryExpression(par.QueryExpression);
@@ -112,9 +126,12 @@
             }
         }
 
-        public Query ProcessQuerySpecification(QuerySpecification spec)
+        public dynamic ProcessQuerySpecification(QuerySpecification spec)
         {
             var query = new Query();
+            MultiQuery multiQuery;
+
+            #region SELECT
 
             _console.WriteLine("SELECT");
             Debug.Indent();
@@ -124,6 +141,9 @@
                 query.Select.Attributes.Add(att);
             }
             Debug.Unindent();
+
+            #endregion
+            #region FROM 
 
             _console.WriteLine("FROM");
             Debug.Indent();
@@ -136,7 +156,7 @@
                 if (t.Alias != null)
                 {
                     if (!relation.Aliases.Contains(t.Alias.ToString()))
-                        relation.Aliases.Add(t.Alias.ToString());
+                        relation.Aliases.Add(t.Alias.Value);
                     _console.Write(t.Alias.Value + " ");
                 }
                 _console.Write(t.SchemaObject.BaseIdentifier.Value);
@@ -144,11 +164,16 @@
             }
             Debug.Unindent();
 
+            #endregion
+            #region WHERE
+
             _console.WriteLine("WHERE");
             Debug.Indent();
             var whereClauseExpression = spec.WhereClause.SearchCondition;
             if (whereClauseExpression is BooleanBinaryExpression)
             {
+                #region BooleanBinary Expression
+
                 var whereClause = whereClauseExpression as BooleanBinaryExpression;
                 var tuple = ProcessBooleanBinaryExpression(whereClause);
                 query.Where = new WhereStatement
@@ -156,64 +181,125 @@
                     Conditions = tuple.Item1,
                     Operators = tuple.Item2,
                 };
-                
+
+                #endregion
             }
             else if (whereClauseExpression is BooleanComparisonExpression)
             {
+                #region Comparison Expression
                 var whereClause = whereClauseExpression as BooleanComparisonExpression;
-                var condition = ProcessBooleanComparisonExpression(whereClause);
-                query.Where.Conditions.Add(condition);
-            }
-            else if (whereClauseExpression is BooleanIsNullExpression)
-            {
-                throw new NotImplementedException("BooleanIsNullExpression not implemented.");
-            }
-            else if (whereClauseExpression is BooleanNotExpression)
-            {
-                throw new NotImplementedException("BooleanNotExpression not implemented.");
-            }
-            else if (whereClauseExpression is BooleanParenthesisExpression)
-            {
-                throw new NotImplementedException("BooleanParenthesisExpression not implemented.");
-            }
-            else if (whereClauseExpression is ExistsPredicate)
-            {
-                throw new NotImplementedException("ExistsPredicate not implemented.");
+
+                if (whereClause.FirstExpression is ColumnReferenceExpression && 
+                    whereClause.SecondExpression is ColumnReferenceExpression)
+                {
+                    var condition = ProcessBooleanComparisonExpression(whereClause);
+                    query.Where.Conditions.Add(condition);
+                }
+                else if(whereClause.FirstExpression is ColumnReferenceExpression &&
+                        whereClause.SecondExpression is ScalarSubquery)
+                {
+                    multiQuery = new MultiQuery();
+                    var leftExp = whereClause.FirstExpression as ColumnReferenceExpression;
+                    var rightExp = whereClause.SecondExpression as ScalarSubquery;
+                    var att = ProcessColumnReferenceExpression(leftExp) as QueryModel.Attribute;
+                    dynamic rightQueryExp = ProcessQueryExpression(rightExp.QueryExpression);
+
+                    if (rightQueryExp is Query)
+                    {
+                        var rightQuery = rightQueryExp as Query;
+                        // Add comparison to where clause of subquery 
+                        ModifyQueryDueToComparison(rightQuery, att, whereClause.ComparisonType);
+                        // Build multi-query
+                        multiQuery.Queries.Add(query);
+                        multiQuery.Queries.Add(rightQuery);
+                        var tuple = new Tuple<dynamic, dynamic>(query, rightQuery);
+                        multiQuery.Operators.Add(tuple, SetOperator.Division);
+                        // Adjust for NOT EXISTS
+                        var neMultiQuery = new MultiQuery();
+                        var neTuple = new Tuple<dynamic, dynamic>(query, multiQuery);
+                        neMultiQuery.Operators.Add(tuple, SetOperator.Except);
+                        neMultiQuery.Queries.Add(query);
+                        neMultiQuery.Queries.Add(multiQuery);
+                        return neMultiQuery;
+                    }
+                    else if (rightQueryExp is MultiQuery)
+                    {
+                        var rightMultiQuery = rightQueryExp as MultiQuery;
+                        // Add comparison to where clause of left subquery
+                        ModifyQueryDueToComparison(rightMultiQuery.Queries[0], att, whereClause.ComparisonType);
+                        // Add comparison to where clause of right subquery
+                        ModifyQueryDueToComparison(rightMultiQuery.Queries[1], att, whereClause.ComparisonType);
+                        // Build/return multi-query
+                        multiQuery.Queries.Add(query);
+                        multiQuery.Queries.Add(rightMultiQuery);
+                        var tuple = new Tuple<dynamic, dynamic>(query, rightMultiQuery);
+                        multiQuery.Operators.Add(tuple, SetOperator.Division);
+                        // Adjust for NOT EXISTS
+                        var neMultiQuery = new MultiQuery();
+                        var neTuple = new Tuple<dynamic, dynamic>(query, multiQuery);
+                        neMultiQuery.Operators.Add(neTuple, SetOperator.Except);
+                        neMultiQuery.Queries.Add(query);
+                        neMultiQuery.Queries.Add(multiQuery);
+                        return neMultiQuery;
+                    }
+                }
+
+
+                #endregion
             }
             else if (whereClauseExpression is InPredicate)
             {
+                #region IN Predicate
+                MultiQuery rightMultiQuery;
+                dynamic rightQueryExp;
                 var whereClause = whereClauseExpression as InPredicate;
                 var expression = whereClause.Expression as ColumnReferenceExpression;
                 var subQuery = whereClause.Subquery as ScalarSubquery;
-                var condition = new Condition();
-                condition.LeftSide = ProcessColumnReferenceExpression(expression);
+                var att = ProcessColumnReferenceExpression(expression) as QueryModel.Attribute;
+                multiQuery = new MultiQuery();
+                multiQuery.Queries.Add(query);
+
                 _console.WriteLine("IN ");
                 _console.WriteLine("(");
                 Debug.Indent();
-                if (subQuery.QueryExpression is BinaryQueryExpression)
-                {
-                    condition.RightSide = ProcessQueryExpression(subQuery.QueryExpression) as Query;
-                }
-                else if (subQuery.QueryExpression is QuerySpecification)
-                {
-                    condition.RightSide = ProcessQueryExpression(subQuery.QueryExpression) as Query;
-                }
-                else
-                {
-                    throw new Exception("Subquery type not handled.");
-                }
+                rightQueryExp = ProcessQueryExpression(subQuery.QueryExpression);
                 Debug.Unindent();
                 _console.WriteLine(")");
-            }
-            else if (whereClauseExpression is SubqueryComparisonPredicate)
-            {
-                throw new NotImplementedException("SubqueryComparisonPredicate not implemented.");
+                
+                if (rightQueryExp is Query)
+                {
+                    var rightQuery = rightQueryExp as Query;
+                    // Add comparison to where clause of subquery 
+                    ModifyQueryDueToIn(rightQuery, att);
+                    // Build/return multi-query
+                    multiQuery.Queries.Add(rightQuery);
+                    var tuple = new Tuple<dynamic, dynamic>(query, rightQuery);
+                    multiQuery.Operators.Add(tuple, SetOperator.Division);
+                    return multiQuery;
+                }
+                else if(rightQueryExp is MultiQuery)
+                {
+                    rightMultiQuery = rightQueryExp as MultiQuery;
+                    // Add comparison to where clause of left subquery
+                    ModifyQueryDueToIn(rightMultiQuery.Queries[0], att);
+                    // Add comparison to where clause of right subquery
+                    ModifyQueryDueToIn(rightMultiQuery.Queries[1], att);
+                    // Build/return multi-query
+                    multiQuery.Queries.Add(rightMultiQuery);
+                    var tuple = new Tuple<dynamic, dynamic>(query, rightMultiQuery);
+                    multiQuery.Operators.Add(tuple, SetOperator.Division);
+                    return multiQuery;
+                }
+                #endregion
             }
             else
             {
                 throw new NotImplementedException("WhereClause type not found.");
             }
             Debug.Unindent();
+
+            #endregion
+            #region GROUP BY
 
             // Group By Expression
             if (spec.GroupByClause != null)
@@ -231,6 +317,9 @@
                 Debug.Unindent();
                 _console.WriteLine(string.Empty);
             }
+
+            #endregion
+            #region HAVING
 
             // Having Expression
             if (spec.HavingClause != null)
@@ -253,7 +342,55 @@
                 Debug.Unindent();
             }
 
+            #endregion
+
             return query;
+        }
+
+        private void ModifyQueryDueToIn(Query query, QueryModel.Attribute att)
+        {
+            var condition = new Condition
+            {
+                LeftSide = att,
+                Operator = BooleanComparisonType.Equals
+            };
+            condition.RightSide = query.Select.Attributes.First();
+            if (query.Where.Conditions.Any())
+            {
+                var condTuple = new Tuple<Condition, Condition>(query.Where.Conditions.Last(), condition);
+                query.Where.Operators.Add(condTuple, BooleanBinaryExpressionType.And);
+            }
+            query.Where.Conditions.Add(condition);
+        }
+
+        private void ModifyQueryDueToComparison(Query query, QueryModel.Attribute att, BooleanComparisonType op)
+        {
+            var condition = new Condition
+            {
+                LeftSide = att
+            };
+            switch(op)
+            {
+                case BooleanComparisonType.Equals:
+                    condition.Operator = BooleanComparisonType.NotEqualToExclamation; break;
+                case BooleanComparisonType.NotEqualToExclamation:
+                    condition.Operator = BooleanComparisonType.Equals; break;
+                case BooleanComparisonType.GreaterThan:
+                    condition.Operator = BooleanComparisonType.LessThanOrEqualTo; break;
+                case BooleanComparisonType.GreaterThanOrEqualTo:
+                    condition.Operator = BooleanComparisonType.LessThan; break;
+                case BooleanComparisonType.LessThan:
+                    condition.Operator = BooleanComparisonType.GreaterThanOrEqualTo; break;
+                case BooleanComparisonType.LessThanOrEqualTo:
+                    condition.Operator = BooleanComparisonType.GreaterThan; break;
+            }
+            condition.RightSide = query.Select.Attributes.First();
+            if (query.Where.Conditions.Any())
+            {
+                var condTuple = new Tuple<Condition, Condition>(query.Where.Conditions.Last(), condition);
+                query.Where.Operators.Add(condTuple, BooleanBinaryExpressionType.And);
+            }
+            query.Where.Conditions.Add(condition);
         }
 
         public MultiQuery ProcessBinaryQueryExpression(BinaryQueryExpression exp)
@@ -263,12 +400,21 @@
             var query1 = ProcessQueryExpression(exp.FirstQueryExpression) as Query;
             _console.WriteLine(")");
             _console.WriteLine(exp.BinaryQueryExpressionType.ToString());
-            var op = exp.BinaryQueryExpressionType;
+            SetOperator op = 
+                exp.BinaryQueryExpressionType == BinaryQueryExpressionType.Except
+                ? SetOperator.Except
+                : exp.BinaryQueryExpressionType == BinaryQueryExpressionType.Intersect
+                    ? SetOperator.Intersect
+                    : exp.BinaryQueryExpressionType == BinaryQueryExpressionType.Union
+                        ? SetOperator.Union
+                        : SetOperator.CartesianProduct; // This last case should not happen.
             _console.WriteLine("(");
             var query2 = ProcessQueryExpression(exp.SecondQueryExpression) as Query;
             _console.WriteLine(")");
-            var tuple = new Tuple<Query, Query>(query1, query2);
+            var tuple = new Tuple<dynamic, dynamic>(query1, query2);
             multi.Operators.Add(tuple, op);
+            multi.Queries.Add(query1);
+            multi.Queries.Add(query2);
             return multi;
         }
 
@@ -277,8 +423,15 @@
             if (exp.ColumnType == ColumnType.Regular)
             {
                 var att = new QueryModel.Attribute();
-                att.Alias = exp.MultiPartIdentifier.Identifiers[0].Value;
-                att.Name = exp.MultiPartIdentifier.Identifiers[1].Value;
+                if(exp.MultiPartIdentifier.Count == 1)
+                {
+                    att.Name = exp.MultiPartIdentifier.Identifiers[0].Value;
+                }
+                else if(exp.MultiPartIdentifier.Count == 2)
+                {
+                    att.Alias = exp.MultiPartIdentifier.Identifiers[0].Value;
+                    att.Name = exp.MultiPartIdentifier.Identifiers[1].Value;
+                }
                 foreach (var i in exp.MultiPartIdentifier.Identifiers)
                 {
                     _console.Write(i.Value + " ");
@@ -438,7 +591,7 @@
             {
                 var integer = exp as IntegerLiteral;
                 _console.Write(integer.Value);
-                return integer;
+                return integer.Value;
             }
             else
             {
@@ -471,7 +624,7 @@
                     var query2 = result.Queries[i];
                     var normalizedOperator = querySetOperators[i - 1] + " ";
                     var op = MultiQuery.OperatorMap.Single(x => x.Value == normalizedOperator).Key;
-                    result.Operators.Add(new Tuple<Query, Query>(query1, query2), op);
+                    result.Operators.Add(new Tuple<dynamic, dynamic>(query1, query2), op);
                 }
             }
         }

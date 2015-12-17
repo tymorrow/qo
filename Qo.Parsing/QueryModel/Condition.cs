@@ -12,12 +12,12 @@
         // TODO: Replace with unicode values later.
         public static readonly Dictionary<BooleanComparisonType, string> OperatorMap = new Dictionary<BooleanComparisonType, string>
         {
-            {BooleanComparisonType.Equals, "= "},
-            {BooleanComparisonType.NotEqualToExclamation, "!= "},
-            {BooleanComparisonType.GreaterThan, "> "},
-            {BooleanComparisonType.LessThan, "< "},
-            {BooleanComparisonType.GreaterThanOrEqualTo, ">= "},
-            {BooleanComparisonType.LessThanOrEqualTo, "<= "}
+            {BooleanComparisonType.Equals, " = "},
+            {BooleanComparisonType.NotEqualToExclamation, " != "},
+            {BooleanComparisonType.GreaterThan, " > "},
+            {BooleanComparisonType.LessThan, " < "},
+            {BooleanComparisonType.GreaterThanOrEqualTo, " >= "},
+            {BooleanComparisonType.LessThanOrEqualTo, " <= "}
         };
         public dynamic LeftSide { get; set; }
         public BooleanComparisonType Operator { get; set; }
@@ -32,7 +32,20 @@
         {
             if (side is string)
             {
-                return "\'" + side + "\' ";
+                int parsedInteger;
+                double parsedReal;
+                if(int.TryParse(side as string, out parsedInteger))
+                {
+                    return parsedInteger + " ";
+                }
+                else if(double.TryParse(side as string, out parsedReal))
+                {
+                    return parsedReal + " ";
+                }
+                else
+                {
+                    return "\'" + side + "\' ";
+                }
             }
             if (side is int)
             {
@@ -43,6 +56,10 @@
                 return ((double)side) + " ";
             }
             if (side is Attribute)
+            {
+                return side.ToString();
+            }
+            if (side is Function)
             {
                 return side.ToString();
             }

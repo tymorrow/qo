@@ -55,7 +55,7 @@
 
             if(From.Relations.Count == 1)
             {
-                root.LeftChild.LeftChild.Parent = root.LeftChild;
+                //root.LeftChild.LeftChild.Parent = root.LeftChild;
                 root.LeftChild.LeftChild = GetRelationNode(From.Relations[0]);
             }
             else

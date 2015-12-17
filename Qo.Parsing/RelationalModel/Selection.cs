@@ -14,8 +14,8 @@
     {
         private readonly Dictionary<BooleanBinaryExpressionType, string> _operatorMap = new Dictionary<BooleanBinaryExpressionType, string>
         {
-            {BooleanBinaryExpressionType.And, "AND "},
-            {BooleanBinaryExpressionType.Or, "OR "}
+            {BooleanBinaryExpressionType.And, " AND "},
+            {BooleanBinaryExpressionType.Or, " OR "}
         };
 
         public List<Condition> Conditions { get; set; }
@@ -36,23 +36,25 @@
 
             if (!Conditions.Any()) return output;
 
-            output = "\u03C3";
+            output = "\u03C3 ";
 
             if (Conditions.Count == 1)
             {
-                return output + Conditions.First();
+                output += Conditions.First();
             }
-
-            output += Conditions[0].ToString();
-            for (var i = 1; i < Conditions.Count; i++)
+            else
             {
-                var condition1 = Conditions[i - 1];
-                var condition2 = Conditions[i];
-                var op = _operatorMap[Operators[new Tuple<Condition, Condition>(condition1, condition2)]];
-                output += op + condition2;
+                output += Conditions[0].ToString();
+                for (var i = 1; i < Conditions.Count; i++)
+                {
+                    var condition1 = Conditions[i - 1];
+                    var condition2 = Conditions[i];
+                    var op = _operatorMap[Operators[new Tuple<Condition, Condition>(condition1, condition2)]];
+                    output += op + condition2;
+                }
             }
 
-            return output;
+            return output + " ";
         }
         /// <summary>
         /// Swaps each pair of Conditions in the store Conditions list.

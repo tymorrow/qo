@@ -17,7 +17,7 @@
 
             if (!Attributes.Any()) return output;
 
-            output = "\u03A0";
+            output = "\u03A0 ";
 
             for (var i = 0; i < Attributes.Count; i++)
             {
@@ -35,7 +35,7 @@
                     output = output.Insert(output.Length - 1, ",");
             }
 
-            return output;
+            return output + " ";
         }
     }
 }

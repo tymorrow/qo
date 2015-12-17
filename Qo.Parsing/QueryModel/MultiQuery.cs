@@ -10,21 +10,23 @@
     /// </summary>
     public class MultiQuery
     {
-        public static readonly Dictionary<BinaryQueryExpressionType, string> OperatorMap = new Dictionary<BinaryQueryExpressionType, string>
+        public static readonly Dictionary<SetOperator, string> OperatorMap = new Dictionary<SetOperator, string>
         {
-            {BinaryQueryExpressionType.Union, "union "},
-            {BinaryQueryExpressionType.Intersect, "intersect "},
-            {BinaryQueryExpressionType.Except, "except "}
+            {SetOperator.Union, " union "},
+            {SetOperator.Intersect, " intersect "},
+            {SetOperator.Except, " except "},
+            {SetOperator.CartesianProduct, " cartesian product "},
+            {SetOperator.Division, " division "}
         };
 
-        public List<Query> Queries { get; set; }
+        public List<dynamic> Queries { get; set; }
 
-        public Dictionary<Tuple<Query, Query>, BinaryQueryExpressionType> Operators { get; set; }
+        public Dictionary<Tuple<dynamic, dynamic>, SetOperator> Operators { get; set; }
 
         public MultiQuery()
         {
-            Queries = new List<Query>();
-            Operators = new Dictionary<Tuple<Query, Query>, BinaryQueryExpressionType>();
+            Queries = new List<dynamic>();
+            Operators = new Dictionary<Tuple<dynamic, dynamic>, SetOperator>();
         }
 
         public override string ToString()
@@ -43,7 +45,7 @@
             {
                 var query1 = Queries[i - 1];
                 var query2 = Queries[i];
-                var op = OperatorMap[Operators[new Tuple<Query, Query>(query1, query2)]];
+                var op = OperatorMap[Operators[new Tuple<dynamic, dynamic>(query1, query2)]];
                 output += op + Environment.NewLine + query2 + Environment.NewLine;
             }
 
@@ -57,15 +59,37 @@
         {
             var root = new Node();
 
-            if (!Queries.Any()) return root;
-
-            if (!Operators.Any()) return Queries[0].GetQueryTree();
-
-            root.Content = Operators.First().Value;
-            root.LeftChild = Queries[0].GetQueryTree();
-            root.RightChild = Queries[1].GetQueryTree();
+            if (Queries.Count == 1)
+            {
+                root = ConvertQueryToNode(Queries[0]);
+            }
+            else if (Queries.Count >= 2)
+            {
+                root.Content = Operators.First().Value;
+                root.LeftChild = ConvertQueryToNode(Queries[0]);
+                root.RightChild = ConvertQueryToNode(Queries[1]);
+            }
 
             return root;
+        }
+
+        private Node ConvertQueryToNode(dynamic query)
+        {
+            if (query is Query)
+            {
+                var q = query as Query;
+                return q.GetQueryTree();
+            }
+            else if (query is MultiQuery)
+            {
+                var node = new Node();
+                var mq = query as MultiQuery;
+                node.Content = mq.Operators.First().Value;
+                node.LeftChild = ConvertQueryToNode(mq.Queries[0]);
+                node.RightChild = ConvertQueryToNode(mq.Queries[1]);
+                return node;
+            }
+            return new Node();
         }
     }
 
@@ -74,6 +98,7 @@
         Union,
         Intersect,
         Except,
-        CartesianProduct
+        CartesianProduct,
+        Division
     }
 }

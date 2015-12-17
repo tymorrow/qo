@@ -23,8 +23,8 @@
         public override string ToString()
         {
             if(Alias.Length > 0)
-                return Alias + "." + Name + " ";
-            return Name + " ";
+                return Alias + "." + Name;
+            return Name;
         }
     }
 }

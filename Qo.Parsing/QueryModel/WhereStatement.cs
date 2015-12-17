@@ -12,8 +12,8 @@
     {
         public static readonly Dictionary<BooleanBinaryExpressionType, string> OperatorMap = new Dictionary<BooleanBinaryExpressionType, string>
         {
-            {BooleanBinaryExpressionType.And, "and "},
-            {BooleanBinaryExpressionType.Or, "or "}
+            {BooleanBinaryExpressionType.And, " AND "},
+            {BooleanBinaryExpressionType.Or, " OR "}
         };
 
         public List<Condition> Conditions { get; set; }

@@ -216,7 +216,7 @@
             };
             multiQuery.Queries.Add(query1);
             multiQuery.Queries.Add(query2);
-            multiQuery.Operators.Add(new Tuple<Query, Query>(query1, query2), BinaryQueryExpressionType.Union);
+            multiQuery.Operators.Add(new Tuple<dynamic, dynamic>(query1, query2), SetOperator.Union);
             return multiQuery;
         }
 
@@ -386,7 +386,7 @@
             };
             multiQuery.Queries.Add(query1);
             multiQuery.Queries.Add(query2);
-            multiQuery.Operators.Add(new Tuple<Query, Query>(query1, query2), BinaryQueryExpressionType.Intersect);
+            multiQuery.Operators.Add(new Tuple<dynamic, dynamic>(query1, query2), SetOperator.Intersect);
             return multiQuery;
         }
 
@@ -494,7 +494,7 @@
             };
             multiQuery.Queries.Add(query1);
             multiQuery.Queries.Add(query2);
-            multiQuery.Operators.Add(new Tuple<Query, Query>(query1, query2), BinaryQueryExpressionType.Except);
+            multiQuery.Operators.Add(new Tuple<dynamic, dynamic>(query1, query2), SetOperator.Except);
             return multiQuery;
         }
     }

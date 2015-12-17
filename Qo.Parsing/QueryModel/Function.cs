@@ -12,6 +12,11 @@ namespace Qo.Parsing.QueryModel
         public List<Attribute> Attributes { get; set; }
         public bool IsWildCard { get; set; }
 
+        public Function()
+        {
+            Attributes = new List<Attribute>();
+        }
+
         /// <summary>
         /// Converts the Function to its string representation.
         /// </summary>
@@ -24,11 +29,11 @@ namespace Qo.Parsing.QueryModel
             }
             else
             {
-                foreach(var a in Attributes)
+                for(int i = 0; i < Attributes.Count; i++)
                 {
-                    display += a.ToString() + ",";
+                    if (i != 0) display += ", ";
+                    display += Attributes[i].ToString();
                 }
-                display.Remove(display.Length - 1);
             }
             display += ")";
             return display;

@@ -10,6 +10,7 @@
     /// </summary>
     public class Relation
     {
+        private readonly string AliasSymbol = "\u03c1";
         public List<Attribute> Attributes { get; set; }
         public List<Attribute> PrimaryKey { get; set; }
         public List<String> Aliases { get; set; }
@@ -29,7 +30,9 @@
         /// </summary>
         public override string ToString()
         {
-            return Name + " ";
+            if (Aliases.Any())
+                return AliasSymbol + Aliases.First() + " " + Name;
+            return Name;
         }
     }
 }

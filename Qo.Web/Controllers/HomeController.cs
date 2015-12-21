@@ -6,13 +6,15 @@
     using System.Linq;
     public class HomeController : Controller
     {
+        // Returns the home page of the website
         public ActionResult Index()
         {
-            ViewBag.Title = "Home Page";
+            ViewBag.Title = "Qo";
 
             return View();
         }
 
+        // Receives a query model from some client, handles it, and returns a package
         [HttpPost]
         public ActionResult SubmitQuery(QoPackage model)
         {
@@ -49,7 +51,8 @@
                 qoOptimizer = new QoOptimizer(schema);
             }
             var package = qoParser.Parse(model.SqlQuery);
-            qoOptimizer.Run(package);
+            if(package.ParseSuccess)
+                qoOptimizer.Run(package);
 
             return Json(package, JsonRequestBehavior.AllowGet);
         } 

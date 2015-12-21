@@ -5,7 +5,7 @@
     public class QoPackage
     {
         internal Node Tree { get; set; }
-        public bool Success { get; set; }
+        public bool ParseSuccess { get; set; }
         public string Error { get; set; }
         public string RelationalAlgebra { get; set; }
         public CleanNode InitialTree { get; set; }

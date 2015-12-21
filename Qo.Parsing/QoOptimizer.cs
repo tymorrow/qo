@@ -33,42 +33,47 @@
         /// </summary>
         public void Run(QoPackage package)
         {
-            var tree = package.Tree;
-            var isValid = DescendentsAreProper(tree);
+            var tree = package.Tree;            
+            try
+            { 
+                if (tree.Content is SetOperator)
+                {
+                    ApplyRule1(tree.LeftChild);
+                    ApplyRule1(tree.RightChild);
+                    package.Optimization1 = tree.GetCleanNode();
+                    ApplyRule2(tree.LeftChild);
+                    ApplyRule2(tree.RightChild);
+                    package.Optimization2 = tree.GetCleanNode();
+                    ApplyRule3(tree.LeftChild);
+                    ApplyRule3(tree.RightChild);
+                    package.Optimization3 = tree.GetCleanNode();
+                    ApplyRule4(tree.LeftChild);
+                    ApplyRule4(tree.RightChild);
+                    package.Optimization4 = tree.GetCleanNode();
+                    ApplyRule5(tree.LeftChild);
+                    ApplyRule5(tree.RightChild);
+                    package.Optimization5 = tree.GetCleanNode();
+                }
+                else
+                {
+                    ApplyRule1(tree);
+                    package.Optimization1 = tree.GetCleanNode();
+                    ApplyRule2(tree);
+                    package.Optimization2 = tree.GetCleanNode();
+                    ApplyRule3(tree);
+                    package.Optimization3 = tree.GetCleanNode();
+                    ApplyRule4(tree);
+                    package.Optimization4 = tree.GetCleanNode();
+                    ApplyRule5(tree);
+                    package.Optimization5 = tree.GetCleanNode();
+                }
 
-            if (tree.Content is SetOperator)
-            {
-                ApplyRule1(tree.LeftChild);
-                ApplyRule1(tree.RightChild);
-                package.Optimization1 = tree.GetCleanNode();
-                ApplyRule2(tree.LeftChild);
-                ApplyRule2(tree.RightChild);
-                package.Optimization2 = tree.GetCleanNode();
-                //ApplyRule3(tree.LeftChild);
-                //ApplyRule3(tree.RightChild);
-                package.Optimization3 = tree.GetCleanNode();
-                //ApplyRule4(tree.LeftChild);
-                //ApplyRule4(tree.RightChild);
-                //package.Optimization4 = tree.GetCleanNode();
-                //ApplyRule5(tree.LeftChild);
-                //ApplyRule5(tree.RightChild);
-                //package.Optimization5 = tree.GetCleanNode();
+                ApplyRule6(tree);
             }
-            else
+            catch (Exception e)
             {
-                ApplyRule1(tree);
-                package.Optimization1 = tree.GetCleanNode();
-                ApplyRule2(tree);
-                package.Optimization2 = tree.GetCleanNode();
-                ApplyRule3(tree);
-                package.Optimization3 = tree.GetCleanNode();
-                //ApplyRule4(tree);
-                package.Optimization4 = tree.GetCleanNode();
-                //ApplyRule5(tree);
-                package.Optimization5 = tree.GetCleanNode();
+                package.Error = e.Message;
             }
-
-            ApplyRule6(tree);
         }
         /// <summary>
         /// Breaks up conjunctive conditions of a selection into a cascade.
@@ -134,26 +139,30 @@
                     cartRankings[relation1]++;
                     cartRankings[relation2]++;
                 }
-                var firstCart = GetFirstCartesian(root);
-                var iter = firstCart;
-                var orderedRelations = cartRankings.OrderBy(o => o.Value).Select(n => n.Key);
-                for (int i = 0; i < orderedRelations.Count() - 1; i++)
+                var firstValue = cartRankings.First().Value;
+                if (!cartRankings.All(c => c.Value == firstValue)) // If they all have the same value, don't do anything.
                 {
-                    if (i == orderedRelations.Count() - 2)
+                    var firstCart = GetFirstCartesian(root);
+                    var iter = firstCart;
+                    var orderedRelations = cartRankings.OrderBy(o => o.Value).Select(n => n.Key);
+                    for (int i = 0; i < orderedRelations.Count() - 1; i++)
                     {
-                        var ele1 = orderedRelations.ElementAt(i);
-                        var ele2 = orderedRelations.ElementAt(i + 1);
-                        iter.RightChild = ele1;
-                        ele1.Parent = iter;
-                        iter.LeftChild = ele2;
-                        ele2.Parent = iter;
-                    }
-                    else
-                    {
-                        var ele = orderedRelations.ElementAt(i);
-                        iter.RightChild = ele;
-                        iter = iter.LeftChild;
-                        ele.Parent = iter;
+                        if (i == orderedRelations.Count() - 2)
+                        {
+                            var ele1 = orderedRelations.ElementAt(i);
+                            var ele2 = orderedRelations.ElementAt(i + 1);
+                            iter.RightChild = ele1;
+                            ele1.Parent = iter;
+                            iter.LeftChild = ele2;
+                            ele2.Parent = iter;
+                        }
+                        else
+                        {
+                            var ele = orderedRelations.ElementAt(i);
+                            iter.RightChild = ele;
+                            iter = iter.LeftChild;
+                            ele.Parent = iter;
+                        }
                     }
                 }
             }
@@ -289,6 +298,8 @@
 
             foreach (var node in cartesianNodes)
             {
+                if(!(node.Parent.Content is Selection)) continue;
+
                 var newNode = new Node()
                 {
                     Content = new Join

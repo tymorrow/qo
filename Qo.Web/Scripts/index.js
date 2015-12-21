@@ -18,6 +18,7 @@
         var height = $(ele).parent().height();
 
         var cluster = d3.layout.cluster()
+          .separation(function (a, b) { return (a.parent == b.parent ? 5 : 5) })
           .size([height - 500, width - 600]);
 
         var diagonal = d3.svg.diagonal().projection(function (d) {
@@ -85,6 +86,7 @@
                 }
                 return output;
             });
+
         d3.select(self.frameElement).style("height", height + "px");
     }
 
@@ -118,23 +120,29 @@
             contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
             data: { SqlQuery: input, Tables: getSchema() },
             success: function (result) {
-                $('#relational-algebra').html(result.RelationalAlgebra);
-                buildTree('#tree-0', result.InitialTree);
-                buildTree('#tree-1', result.Optimization1);
-                buildTree('#tree-2', result.Optimization2);
-                buildTree('#tree-3', result.Optimization3);
-                buildTree('#tree-4', result.Optimization4);
-                buildTree('#tree-5', result.Optimization5);
-
-                $('#output').html(formatted);
-                prettyPrint('#output');
-                $('#output').removeClass('prettyprinted');
-
                 $('#result-area-loader').hide();
-                $('#result-area').show();
+                if (result.ParseSuccess) {
+                    $('#result-area').show();
+                    $('#output').html(formatted);
+                    prettyPrint('#output');
+                    $('#output').removeClass('prettyprinted');
+
+                    console.log(result);
+                    $('#relational-algebra').html(result.RelationalAlgebra);
+                    buildTree('#tree-0', result.InitialTree);
+                    buildTree('#tree-1', result.Optimization1);
+                    buildTree('#tree-2', result.Optimization2);
+                    buildTree('#tree-3', result.Optimization3);
+                    buildTree('#tree-4', result.Optimization4);
+                    buildTree('#tree-5', result.Optimization5);
+                } else {
+                    $('#output').html(result.Error);
+                }
             },
             error: function (resp) {
-                $('#output').html(resp.responseText);
+                console.log(resp.responseText);
+                $('#output').text('The server had an unspecified error.  You may check the browser console output for details.');
+                $('#result-area-loader').hide();
             }
         });
 

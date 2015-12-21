@@ -2,10 +2,8 @@
 {
     using Microsoft.SqlServer.TransactSql.ScriptDom;
     using QueryModel;
-    using RelationalModel;
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using System.Text;
@@ -58,38 +56,48 @@
                         sb.AppendLine(e.Message);
                     }
                     package.Error = sb.ToString();
-                    _console.WriteLine(sb.ToString());
                 }
                 else
                 {
                     var batch = script.Batches.First();
                     var statement = batch.Statements.First();
                     var result = ProcessStatement(statement);
-                    if(result is Query)
+                    var schemaErrors = new List<string>();
+                    var isValid = QueryIsValid(result, schemaErrors);
+
+                    if (isValid)
                     {
-                        var unboxedResult = result as Query;
-                        package.Tree = unboxedResult.GetQueryTree();
-                        var validTree = QoOptimizer.DescendentsAreProper(package.Tree);
-                        package.RelationalAlgebra = package.Tree.ToString();
-                        package.InitialTree = package.Tree.GetCleanNode();
+                        if (result is Query)
+                        {
+                            var unboxedResult = result as Query;
+                            package.Tree = unboxedResult.GetQueryTree();
+                            package.RelationalAlgebra = package.Tree.ToString();
+                            package.InitialTree = package.Tree.GetCleanNode();
+                        }
+                        if (result is MultiQuery)
+                        {
+                            var unboxedResult = result as MultiQuery;
+                            package.Tree = unboxedResult.GetQueryTree();
+                            package.RelationalAlgebra = package.Tree.ToString();
+                            package.InitialTree = package.Tree.GetCleanNode();
+                        }
+                        package.ParseSuccess = true;
                     }
-                    if(result is MultiQuery)
+                    else
                     {
-                        var unboxedResult = result as MultiQuery;
-                        package.Tree = unboxedResult.GetQueryTree();
-                        var validTree = QoOptimizer.DescendentsAreProper(package.Tree);
-                        package.RelationalAlgebra = package.Tree.ToString();
-                        package.InitialTree = package.Tree.GetCleanNode();
+                        var sb = new StringBuilder();
+                        foreach (var e in schemaErrors)
+                        {
+                            sb.AppendLine(e);
+                        }
+                        package.Error = sb.ToString();
                     }
-                    package.Success = true;
                 }
             }
             catch (Exception e)
             {
-                _console.WriteLine(e.Message);
-                package.Error = e.Message;
+                package.Error = e.InnerException.Message;
             }
-            _console.WriteLine(package.RelationalAlgebra);
             return package;
         }
         
@@ -133,46 +141,41 @@
 
             #region SELECT
 
-            _console.WriteLine("SELECT");
-            Debug.Indent();
             foreach (SelectScalarExpression exp in spec.SelectElements)
             {
                 var att = ProcessSelectScalarExpression(exp);
                 query.Select.Attributes.Add(att);
             }
-            Debug.Unindent();
 
             #endregion
             #region FROM 
 
-            _console.WriteLine("FROM");
-            Debug.Indent();
             foreach (NamedTableReference t in spec.FromClause.TableReferences)
             {
                 var tableName = t.SchemaObject.BaseIdentifier.Value;
-                var schemaRelation = _schema.Relations.Single(r => r.Name == tableName);
-                var relation = new Relation(schemaRelation);
-                query.From.Relations.Add(relation);
-
-                if (t.Alias != null)
+                var schemaRelation = _schema.Relations.SingleOrDefault(r => r.Name == tableName);
+                if (schemaRelation == null)
                 {
-                    if (!schemaRelation.Aliases.Contains(t.Alias.ToString()))
-                    {
-                        relation.Aliases.Add(t.Alias.Value);
-                        schemaRelation.Aliases.Add(t.Alias.Value);
-                    }
-                    _console.Write(t.Alias.Value + " ");
+                    var relation = new Relation();
+                    relation.Name = tableName;
+                    query.From.Relations.Add(relation);
                 }
-                _console.Write(t.SchemaObject.BaseIdentifier.Value);
-                _console.WriteLine(string.Empty);
+                else
+                {
+                    query.From.Relations.Add(schemaRelation);
+                    if (t.Alias != null)
+                    {
+                        if (!schemaRelation.Aliases.Contains(t.Alias.ToString()))
+                        {
+                            schemaRelation.Aliases.Add(t.Alias.Value);
+                        }
+                    }
+                }
             }
-            Debug.Unindent();
 
             #endregion
             #region WHERE
-
-            _console.WriteLine("WHERE");
-            Debug.Indent();
+            
             var whereClauseExpression = spec.WhereClause.SearchCondition;
             if (whereClauseExpression is BooleanBinaryExpression)
             {
@@ -269,12 +272,7 @@
                 multiQuery = new MultiQuery();
                 multiQuery.Queries.Add(query);
 
-                _console.WriteLine("IN ");
-                _console.WriteLine("(");
-                Debug.Indent();
                 rightQueryExp = ProcessQueryExpression(subQuery.QueryExpression);
-                Debug.Unindent();
-                _console.WriteLine(")");
                 
                 if (rightQueryExp is Query)
                 {
@@ -309,7 +307,6 @@
             {
                 throw new NotImplementedException("WhereClause type not found.");
             }
-            Debug.Unindent();
 
             #endregion
             #region GROUP BY
@@ -317,8 +314,6 @@
             // Group By Expression
             if (spec.GroupByClause != null)
             {
-                _console.WriteLine("GROUP BY");
-                Debug.Indent();
                 var groupByClause = spec.GroupByClause;
                 foreach (ExpressionGroupingSpecification gSpec in groupByClause.GroupingSpecifications)
                 {
@@ -327,8 +322,6 @@
                         ProcessColumnReferenceExpression(gSpec.Expression as ColumnReferenceExpression);
                     }
                 }
-                Debug.Unindent();
-                _console.WriteLine(string.Empty);
             }
 
             #endregion
@@ -337,8 +330,6 @@
             // Having Expression
             if (spec.HavingClause != null)
             {
-                _console.WriteLine("HAVING ");
-                Debug.Indent();
                 var havingClauseExpression = spec.HavingClause.SearchCondition;
                 if (havingClauseExpression is BooleanBinaryExpression)
                 {
@@ -352,7 +343,6 @@
                 {
                     throw new NotImplementedException("HavingClause type not found.");
                 }
-                Debug.Unindent();
             }
 
             #endregion
@@ -614,5 +604,95 @@
         }
 
         #endregion
+
+        private bool QueryIsValid(dynamic query, List<string> errors)
+        {
+            if (query == null) return true;
+
+            var isValid = true;
+            if (query is MultiQuery)
+            {
+                var unboxed = query as MultiQuery;
+                if (unboxed.Queries.Count == 1)
+                    isValid = QueryIsValid(unboxed.Queries[0], errors);
+                else if (unboxed.Queries.Count == 2 && isValid) // Don't continue validation if we're already invalid
+                    isValid = QueryIsValid(unboxed.Queries[0], errors) && QueryIsValid(unboxed.Queries[1], errors);
+            }
+            else if (query is Query)
+            {
+                var unboxed = query as Query;
+                // Check that table names exist in schema
+                foreach (var r in unboxed.From.Relations)
+                {
+                    if (!_schema.Relations.Select(l => l.Name).Contains(r.Name))
+                    {
+                        errors.Add(string.Format("'{0}' is not a table found in the given schema.", r.Name));
+                    }
+                    if (errors.Any()) return false;
+                }
+                // Check that attributes in Select exist in specified table
+                foreach (var a in unboxed.Select.Attributes)
+                {
+                    errors.AddRange(ValidateAttribute(a, unboxed.From.Relations));
+                    if (errors.Any()) return false;
+                }
+                // Check that attributes in From exist in schema.
+                foreach(var c in unboxed.Where.Conditions)
+                {
+                    errors.AddRange(ValidateAttribute(c.LeftSide, unboxed.From.Relations));
+                    errors.AddRange(ValidateAttribute(c.RightSide, unboxed.From.Relations));
+                    if (errors.Any()) return false;
+                }
+            }
+            return isValid;
+        }
+        private List<string> ValidateAttribute(dynamic attribute, List<Relation> relations)
+        {
+            List<string> errors = new List<string>();
+            if (attribute is QueryModel.Attribute)
+            {
+                var attr = attribute as QueryModel.Attribute;
+                if (string.IsNullOrEmpty(attr.Alias))
+                {
+                    var matchingRelations = relations.Where(r => r.Attributes.Select(t => t.Name).Contains(attr.Name));
+                    if (relations.Count() > 1)
+                    {
+                        errors.Add(string.Format("The attribute '{0}' with no alias was found on multiple tables.", attr.Name));
+                    }
+                }
+                else
+                {
+                    var relation = relations.SingleOrDefault(r => r.Aliases.Contains(attr.Alias) && r.Attributes.Select(a => a.Name).Contains(attr.Name));
+                    if (relation == null)
+                    {
+                        errors.Add(string.Format("The attribute '{0}' with alias '{1}' was not found on any existing table.", attr.Name, attr.Alias));
+                    }
+                }
+            }
+            else if (attribute is Function)
+            {
+                var func = attribute as Function;
+                foreach (var f in func.Attributes)
+                {
+                    if (string.IsNullOrEmpty(f.Alias))
+                    {
+                        var matchingRelations = relations.Where(r => r.Attributes.Select(t => t.Name).Contains(f.Name));
+                        if (relations.Count() > 1)
+                        {
+                            errors.Add(string.Format("The attribute '{0}' with no alias was found on multiple tables.", f.Name));
+                        }
+                    }
+                    else
+                    {
+                        var relation = relations.SingleOrDefault(r => r.Aliases.Contains(f.Alias) && r.Attributes.Select(a => a.Name).Contains(f.Name));
+                        if (relation == null)
+                        {
+                            errors.Add(string.Format("The attribute '{0}' with alias '{1}' was not found on any existing table.", f.Name, f.Alias));
+                        }
+                    }
+                }
+            }
+            return errors;
+        }
     }
 }

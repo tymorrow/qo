@@ -14,7 +14,16 @@
         public List<Attribute> Attributes { get; set; }
         public List<Attribute> PrimaryKey { get; set; }
         public List<string> Aliases { get; set; }
-        public string Name { get; set; }
+        private string name = string.Empty;
+        public string Name
+        {
+            get { return name; }
+            set
+            {
+                name = value;
+                Aliases.Add(value);
+            }
+        }
         public int Priority { get; set; }
         public int TupleCount { get; set; }
 
@@ -23,7 +32,7 @@
             Attributes = new List<Attribute>();
             PrimaryKey = new List<Attribute>();
             Aliases = new List<string>();
-            Name = string.Empty;
+            name = string.Empty;
         }
         public Relation(Relation r)
         {

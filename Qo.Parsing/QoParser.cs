@@ -654,8 +654,8 @@
                 var attr = attribute as QueryModel.Attribute;
                 if (string.IsNullOrEmpty(attr.Alias))
                 {
-                    var matchingRelations = relations.Where(r => r.Attributes.Select(t => t.Name).Contains(attr.Name));
-                    if (relations.Count() > 1)
+                    var matchingRelations = relations.Where(r => r.Attributes.Any(t => t.Name == attr.Name));
+                    if (matchingRelations.Count() > 1)
                     {
                         errors.Add(string.Format("The attribute '{0}' with no alias was found on multiple tables.", attr.Name));
                     }
@@ -676,8 +676,8 @@
                 {
                     if (string.IsNullOrEmpty(f.Alias))
                     {
-                        var matchingRelations = relations.Where(r => r.Attributes.Select(t => t.Name).Contains(f.Name));
-                        if (relations.Count() > 1)
+                        var matchingRelations = relations.Where(r => r.Attributes.Any(t => t.Name == f.Name));
+                        if (matchingRelations.Count() > 1)
                         {
                             errors.Add(string.Format("The attribute '{0}' with no alias was found on multiple tables.", f.Name));
                         }

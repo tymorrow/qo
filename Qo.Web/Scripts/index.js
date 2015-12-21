@@ -128,6 +128,8 @@
                     $('#output').removeClass('prettyprinted');
 
                     console.log(result);
+
+                    showTree(0);
                     $('#relational-algebra').html(result.RelationalAlgebra);
                     buildTree('#tree-0', result.InitialTree);
                     buildTree('#tree-1', result.Optimization1);

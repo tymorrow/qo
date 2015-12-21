@@ -8,14 +8,15 @@
         static void Main(string[] args)
         {
             var sqlQuery = @"
-SELECT sname
-FROM Sailors, Boats, Reserves
-WHERE Sailors.sid=Reserves.sid AND Reserves.bid=Boats.bid AND Boats.color=’red’
+SELECT S.sname
+FROM Sailors AS S
+WHERE S.sid IN ((SELECT R.sid
+FROM Reserves AS R, Boats AS B
+WHERE R.bid = B.bid AND B.color = ‘red’)
 INTERSECT
-SELECT sname
-FROM Sailors, Boats, Reserves
-WHERE Sailors.sid=Reserves.sid AND Reserves.bid=Boats.bid AND
-Boats.color=’green’
+(SELECT R2.sid
+FROM Reserves AS R2, Boats AS B2
+WHERE R2.bid = B2.bid AND B2.color = ‘green’))
             ";
             
             var qoParser = new QoParser();

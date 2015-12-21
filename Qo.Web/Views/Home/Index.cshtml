@@ -27,7 +27,7 @@
     </div>
     <div class="col-md-9">
         <div class="panel panel-default">
-            <div class="panel-heading">Enter the SQL query to optimize</div>
+            <div class="panel-heading"><strong>Enter a SQL Query</strong></div>
             <div class="panel-body">
                 <div class="form-group">
                     <textarea class="form-control" id="txtSQL" onkeyup="saveState()" rows="10" style="max-width:100%"></textarea>
@@ -40,66 +40,66 @@
                 </div>
             </div>
         </div>
-
         <div class="panel panel-default">
-            <div class="panel-heading">Formatted SQL query</div>
-            <pre id="preFormatted" class="prettyprint lang-sql"></pre>
+            <div class="panel-heading"><strong>Formatted SQL Query / Output</strong></div>
+            <pre id="output" class="prettyprint lang-sql"></pre>
         </div>
-
-        <div class="panel panel-default">
-            <div class="panel-heading">Relational Algebra Representation</div>
-            <pre id="relational-algebra" class="prettyprint lang-sql text-left">
+        <i class="fa fa-spinner fa-spin fa-4x" id="result-area-loader" style="display:none;"></i>
+        <div id="result-area" style="display:none;">
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>Relational Algebra</strong></div>
+                <pre id="relational-algebra" class="prettyprint lang-sql text-left">
                 
             </pre>
-        </div>
-
-        <div class="panel panel-default">
-            <div class="panel-heading">Query Tree Visualizer</div>
-
-            <div class="panel-body">
-                <p><small>Select Optimization Stage</small></p>
-                <div class="btn-group">
-                    <button type="button" id="btn-0" class="btn btn-default active" onclick="showTree(0)">0</button>
-                    <button type="button" id="btn-1" class="btn btn-default" onclick="showTree(1)">1</button>
-                    <button type="button" id="btn-2" class="btn btn-default" onclick="showTree(2)">2</button>
-                    <button type="button" id="btn-3" class="btn btn-default" onclick="showTree(3)">3</button>
-                    <button type="button" id="btn-4" class="btn btn-default" onclick="showTree(4)">4</button>
-                    <button type="button" id="btn-5" class="btn btn-default" onclick="showTree(5)">5</button>
-                </div>
             </div>
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>Query Tree Visualizer</strong></div>
 
-            <ul class="list-group">
-                <li class="list-group-item">
-                    <small id="stage-0-info" class="stage-info">
-                        <strong>Stage 0:</strong> No optimizations.
-                    </small>
-                    <small id="stage-1-info" class="stage-info" style="display:none;">
-                        <strong>Stage 1:</strong> Break up conjunctive selection conditions.
-                    </small>
-                    <small id="stage-2-info" class="stage-info" style="display:none;">
-                        <strong>Stage 2:</strong> Move selections as close to their relations as possible.
-                    </small>
-                    <small id="stage-3-info" class="stage-info" style="display:none;">
-                        <strong>Stage 3:</strong> Move more restrictive selections left side of the tree so they're executed sooner.
-                    </small>
-                    <small id="stage-4-info" class="stage-info" style="display:none;">
-                        <strong>Stage 4:</strong> Replace adjacent cartesian products and selections with join.
-                    </small>
-                    <small id="stage-5-info" class="stage-info" style="display:none;">
-                        <strong>Stage 5:</strong> Move projections as far down as possible.
-                    </small>
-                    <small id="stage-6-info" class="stage-info" style="display:none;">
-                        <strong>Stage 6:</strong> Identifies all subtrees that represent groups of operations that can be executed by a single algorithm.
-                    </small>
-                </li>
-                <li class="list-group-item tree-graph" id="tree-0" style="height:1000px; padding:0;"></li>
-                <li class="list-group-item tree-graph" id="tree-1" style="height:1000px; padding:0; display:none;"></li>
-                <li class="list-group-item tree-graph" id="tree-2" style="height:1000px; padding:0; display:none;"></li>
-                <li class="list-group-item tree-graph" id="tree-3" style="height:1000px; padding:0; display:none;"></li>
-                <li class="list-group-item tree-graph" id="tree-4" style="height:1000px; padding:0; display:none;"></li>
-                <li class="list-group-item tree-graph" id="tree-5" style="height:1000px; padding:0; display:none;"></li>
-                <li class="list-group-item tree-graph" id="tree-5" style="height:1000px; padding:0; display:none;"></li>
-            </ul>
+                <div class="panel-body">
+                    <p><small>Select Optimization Stage</small></p>
+                    <div class="btn-group">
+                        <button type="button" id="btn-0" class="btn btn-default active" onclick="showTree(0)">0</button>
+                        <button type="button" id="btn-1" class="btn btn-default" onclick="showTree(1)">1</button>
+                        <button type="button" id="btn-2" class="btn btn-default" onclick="showTree(2)">2</button>
+                        <button type="button" id="btn-3" class="btn btn-default" onclick="showTree(3)">3</button>
+                        <button type="button" id="btn-4" class="btn btn-default" onclick="showTree(4)">4</button>
+                        <button type="button" id="btn-5" class="btn btn-default" onclick="showTree(5)">5</button>
+                    </div>
+                </div>
+
+                <ul class="list-group">
+                    <li class="list-group-item">
+                        <small id="stage-0-info" class="stage-info">
+                            <strong>Stage 0:</strong> No optimizations.
+                        </small>
+                        <small id="stage-1-info" class="stage-info" style="display:none;">
+                            <strong>Stage 1:</strong> Break up conjunctive selection conditions.
+                        </small>
+                        <small id="stage-2-info" class="stage-info" style="display:none;">
+                            <strong>Stage 2:</strong> Move selections as close to their relations as possible.
+                        </small>
+                        <small id="stage-3-info" class="stage-info" style="display:none;">
+                            <strong>Stage 3:</strong> Move more restrictive selections left side of the tree so they're executed sooner.
+                        </small>
+                        <small id="stage-4-info" class="stage-info" style="display:none;">
+                            <strong>Stage 4:</strong> Replace adjacent cartesian products and selections with join.
+                        </small>
+                        <small id="stage-5-info" class="stage-info" style="display:none;">
+                            <strong>Stage 5:</strong> Move projections as far down as possible.
+                        </small>
+                        <small id="stage-6-info" class="stage-info" style="display:none;">
+                            <strong>Stage 6:</strong> Identifies all subtrees that represent groups of operations that can be executed by a single algorithm.
+                        </small>
+                    </li>
+                    <li class="list-group-item tree-graph" id="tree-0" style="height:1000px; padding:0;"></li>
+                    <li class="list-group-item tree-graph" id="tree-1" style="height:1000px; padding:0; display:none;"></li>
+                    <li class="list-group-item tree-graph" id="tree-2" style="height:1000px; padding:0; display:none;"></li>
+                    <li class="list-group-item tree-graph" id="tree-3" style="height:1000px; padding:0; display:none;"></li>
+                    <li class="list-group-item tree-graph" id="tree-4" style="height:1000px; padding:0; display:none;"></li>
+                    <li class="list-group-item tree-graph" id="tree-5" style="height:1000px; padding:0; display:none;"></li>
+                    <li class="list-group-item tree-graph" id="tree-5" style="height:1000px; padding:0; display:none;"></li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>

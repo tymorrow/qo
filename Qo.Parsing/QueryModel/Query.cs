@@ -2,7 +2,8 @@
 {
     using RelationalModel;
     using System;
-    
+    using System.Collections.Generic;
+    using System.Linq;
     /// <summary>
     /// Stores a Select, From, and Where Statement.
     /// </summary>
@@ -39,52 +40,63 @@
         /// </summary>
         public Node GetQueryTree()
         {
-            var root = new Node();
-            root.Content = new Projection
+            var projectionNode = new Node();
+            projectionNode.Content = new Projection
             {
                 Attributes = Select.Attributes
             };
 
-            root.LeftChild = new Node();
-            root.LeftChild.Parent = root;
-            root.LeftChild.Content = new Selection
+            Node selectionNode = new Node();
+            if (Where.Conditions.Any())
             {
-                Conditions = Where.Conditions,
-                Operators = Where.Operators
-            };
+                selectionNode.Content = new Selection
+                {
+                    Conditions = Where.Conditions,
+                    Operators = Where.Operators
+                };
+            }
 
-            if(From.Relations.Count == 1)
+            List<Node> relationNodes = new List<Node>();
+            foreach(var r in From.Relations)
             {
-                root.LeftChild.LeftChild.Parent = root.LeftChild;
-                root.LeftChild.LeftChild = GetRelationNode(From.Relations[0]);
+                relationNodes.Add(GetRelationNode(r));
+            }
+
+            var root = projectionNode;
+            var iter = root;
+            if(selectionNode.Content != null)
+            {
+                root.LeftChild = selectionNode;
+                root.LeftChild.Parent = root;
+                iter = iter.LeftChild;
+            }
+
+            // TODO: Could do some sorting of relations here to help later.
+            if(relationNodes.Count == 1)
+            {
+                relationNodes[0].Parent = iter;
+                relationNodes[0].Parent.LeftChild = relationNodes[0];
             }
             else
             {
-                var iterator = root.LeftChild.LeftChild = new Node
+                for (var i = 0; i < relationNodes.Count; i++)
                 {
-                    Parent = root.LeftChild,
-                    Content = SetOperator.CartesianProduct
-                };
+                    var cart = new Node();
+                    cart.Content = SetOperator.CartesianProduct;
 
-                for (var i = From.Relations.Count - 1; i > 0; i--)
-                {
-                    iterator.RightChild = GetRelationNode(From.Relations[i]);
-                    iterator.RightChild.Parent = iterator;
+                    cart.Parent = iter;
+                    cart.Parent.LeftChild = cart;
+                    cart.RightChild = relationNodes[i];
+                    cart.RightChild.Parent = cart;
 
-                    if(i == 1)
+                    if (i >= relationNodes.Count - 2)
                     {
-                        iterator.LeftChild = GetRelationNode(From.Relations[i - 1]);
-                        iterator.LeftChild.Parent = iterator;
+                        cart.LeftChild = relationNodes[i + 1];
+                        cart.LeftChild.Parent = cart;
+                        i++;
                     }
-                    else
-                    {
-                        iterator.LeftChild = new Node
-                        {
-                            Parent = iterator,
-                            Content = SetOperator.CartesianProduct
-                        };
-                    }
-                    iterator = iterator.LeftChild;
+
+                    iter = cart;
                 }
             }
 

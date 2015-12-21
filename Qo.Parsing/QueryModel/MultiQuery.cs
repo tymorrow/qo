@@ -85,14 +85,8 @@
             }
             else if (query is MultiQuery)
             {
-                var node = new Node();
                 var mq = query as MultiQuery;
-                node.Content = mq.Operators.First().Value;
-                node.LeftChild = ConvertQueryToNode(mq.Queries[0]);
-                node.LeftChild.Parent = node;
-                node.RightChild = ConvertQueryToNode(mq.Queries[1]);
-                node.RightChild.Parent = node;
-                return node;
+                return mq.GetQueryTree();
             }
             return new Node();
         }

@@ -105,9 +105,12 @@
             tableCase: $('#tbCase').val()
         };
 
+        $('output').html('');
+        $('#result-area').hide();
+        $('#result-area-loader').show();
+
         var input = $('#txtSQL').val();
         var formatted = SqlPrettyPrinter.format(input, settings);
-        console.log(getSchema());
 
         $.ajax({
             type: "POST",
@@ -115,26 +118,26 @@
             contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
             data: { SqlQuery: input, Tables: getSchema() },
             success: function (result) {
-                console.log(result);
-                console.log(result.RelationalAlgebra);
                 $('#relational-algebra').html(result.RelationalAlgebra);
-                console.log(result);
-                // BEGIN BUILDING TREE
                 buildTree('#tree-0', result.InitialTree);
                 buildTree('#tree-1', result.Optimization1);
                 buildTree('#tree-2', result.Optimization2);
                 buildTree('#tree-3', result.Optimization3);
                 buildTree('#tree-4', result.Optimization4);
                 buildTree('#tree-5', result.Optimization5);
+
+                $('#output').html(formatted);
+                prettyPrint('#output');
+                $('#output').removeClass('prettyprinted');
+
+                $('#result-area-loader').hide();
+                $('#result-area').show();
             },
             error: function (resp) {
-                console.log(resp.responseText);
+                $('#output').html(resp.responseText);
             }
         });
 
-        $('#preFormatted').html(formatted);
-        prettyPrint('#preFormatted');
-        $('#preFormatted').removeClass('prettyprinted');
         window.APPDATA.formatted = formatted;
     };
 
@@ -161,10 +164,10 @@
             $('.' + tableName + '-att-name').each(function (index, ele) {
                 var attName = ele.innerText;
                 var attType = $('#' + tableName + '-' + attName + '-type').text();
-                var att = { Name: attName, Type: attType, IsFk: false };
+                var att = { Name: attName, Type: attType, IsPk: false };
 
                 if ($('#' + tableName + '-' + attName + '-type').prev().is('u')) {
-                    att.IsFk = true;
+                    att.IsPk = true;
                 }
 
                 table.Attributes.push(att);
@@ -183,16 +186,16 @@
                 var att = table.Attributes[a];
                 $('#' + table.Name + ' #new-att #name').val(att.Name);
                 $('#' + table.Name + ' #new-att #type').val(att.Type);
-                if (att.IsFk) {
-                    $('#' + table.Name + ' #new-att #fk').prop('checked', true);
+                if (att.IsPk) {
+                    $('#' + table.Name + ' #new-att #pk').prop('checked', true);
                 } else {
-                    $('#' + table.Name + ' #new-att #fk').prop('checked', false);
+                    $('#' + table.Name + ' #new-att #pk').prop('checked', false);
                 }
                 addTableAttribute(table.Name);
             }
             $('#' + table.Name + ' #new-att #name').val('');
             $('#' + table.Name + ' #new-att #type').val('int');
-            $('#' + table.Name + ' #new-att #fk').prop('checked', false);
+            $('#' + table.Name + ' #new-att #pk').prop('checked', false);
         }
         $('#new-table').val('');
     };
@@ -221,7 +224,7 @@
                         <input type="text" class="form-control" id="name" \
                                placeholder="Enter attribute name" /> \
                         <span class="input-group-addon"> \
-                            <input type="checkbox" id="fk" /> fk \
+                            <input type="checkbox" id="pk" /> pk \
                         </span> \
                     </div><br/> \
                     <div class="input-group"> \
@@ -255,8 +258,8 @@
             return;
         }
         var attType = $('#' + tableId + ' #new-att #type').val();
-        var attFk = $('#' + tableId + ' #new-att #fk').is(':checked');
-        var attNameHtml = attFk
+        var attPk = $('#' + tableId + ' #new-att #pk').is(':checked');
+        var attNameHtml = attPk
             ? '<u class="' + tableId + '-att-name" id="' + attId + '-name">' + attName + '</u>'
             : '<span class="' + tableId + '-att-name" id="' + attId + '-name">' + attName + '</span>';
         var attHtml =

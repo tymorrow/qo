@@ -69,6 +69,7 @@
                     {
                         var unboxedResult = result as Query;
                         package.Tree = unboxedResult.GetQueryTree();
+                        var validTree = QoOptimizer.DescendentsAreProper(package.Tree);
                         package.RelationalAlgebra = package.Tree.ToString();
                         package.InitialTree = package.Tree.GetCleanNode();
                     }
@@ -76,6 +77,7 @@
                     {
                         var unboxedResult = result as MultiQuery;
                         package.Tree = unboxedResult.GetQueryTree();
+                        var validTree = QoOptimizer.DescendentsAreProper(package.Tree);
                         package.RelationalAlgebra = package.Tree.ToString();
                         package.InitialTree = package.Tree.GetCleanNode();
                     }
@@ -85,6 +87,7 @@
             catch (Exception e)
             {
                 _console.WriteLine(e.Message);
+                package.Error = e.Message;
             }
             _console.WriteLine(package.RelationalAlgebra);
             return package;
@@ -196,6 +199,12 @@
                     var condition = ProcessBooleanComparisonExpression(whereClause);
                     query.Where.Conditions.Add(condition);
                 }
+                else if (whereClause.FirstExpression is ColumnReferenceExpression &&
+                    whereClause.SecondExpression is IntegerLiteral)
+                {
+                    var condition = ProcessBooleanComparisonExpression(whereClause);
+                    query.Where.Conditions.Add(condition);
+                }
                 else if(whereClause.FirstExpression is ColumnReferenceExpression &&
                         whereClause.SecondExpression is ScalarSubquery)
                 {
@@ -272,6 +281,7 @@
                     var rightQuery = rightQueryExp as Query;
                     // Add comparison to where clause of subquery 
                     ModifyQueryDueToIn(rightQuery, att);
+                    rightQuery.From.Relations.Add(query.From.Relations.First()); // This may not be enough
                     // Build/return multi-query
                     multiQuery.Queries.Add(rightQuery);
                     var tuple = new Tuple<dynamic, dynamic>(query, rightQuery);
@@ -283,8 +293,10 @@
                     rightMultiQuery = rightQueryExp as MultiQuery;
                     // Add comparison to where clause of left subquery
                     ModifyQueryDueToIn(rightMultiQuery.Queries[0], att);
+                    rightMultiQuery.Queries[0].From.Relations.Add(query.From.Relations.First()); // This may not be enough
                     // Add comparison to where clause of right subquery
                     ModifyQueryDueToIn(rightMultiQuery.Queries[1], att);
+                    rightMultiQuery.Queries[1].From.Relations.Add(query.From.Relations.First()); // This may not be enough
                     // Build/return multi-query
                     multiQuery.Queries.Add(rightMultiQuery);
                     var tuple = new Tuple<dynamic, dynamic>(query, rightMultiQuery);

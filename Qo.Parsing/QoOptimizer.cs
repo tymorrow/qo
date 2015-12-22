@@ -232,7 +232,7 @@
                             var leftRightRank = GetRestrictiveWeight(iter.LeftChild.LeftChild.RightChild);
                             var rightRank = GetRestrictiveWeight(iter.RightChild);
 
-                            if (leftLeftRank <= rightRank)
+                            if (leftLeftRank < rightRank)
                             {
                                 var select1 = iter.Parent;
                                 var select1Parent = iter.Parent.Parent;
@@ -321,7 +321,7 @@
                                 var att2 = availableAttribute as Attribute;
 
                                 if (att.Name == att2.Name &&
-                                    (att.Alias == att2.Alias || att.Alias == att2.Alias.Substring(0,1)))
+                                    (att.Alias == att2.Alias || att.Alias == att2.Alias.Substring(0,1) || att.Alias == att2.Alias.Substring(0, 1) + "2"))
                                 {
                                     intersection.Add(attribute);
                                 }

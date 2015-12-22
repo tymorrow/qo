@@ -312,13 +312,16 @@
                     else if (rightQueryExp is MultiQuery)
                     {
                         rightMultiQuery = rightQueryExp as MultiQuery;
+                        var query1 = rightMultiQuery.Queries[0] as Query;
+                        var query2 = rightMultiQuery.Queries[1] as Query;
+
                         // Add comparison to where clause of left subquery
-                        ModifyQueryDueToIn(rightMultiQuery.Queries[0], att, query.Select.Attributes.First());
-                        rightMultiQuery.Queries[0].From.Relations.Add(query.From.Relations.First()); // This may not be enough
-                                                                                                     // Add comparison to where clause of right subquery
-                        ModifyQueryDueToIn(rightMultiQuery.Queries[1], att, query.Select.Attributes.First());
-                        rightMultiQuery.Queries[1].From.Relations.Add(query.From.Relations.First()); // This may not be enough
-                                                                                                     // Build/return multi-query
+                        ModifyQueryDueToIn(query1, att, query.Select.Attributes.First());
+                        query1.From.Relations.Insert(0, query.From.Relations.First()); 
+                        
+                        ModifyQueryDueToIn(query2, att, query.Select.Attributes.First());
+                        query2.From.Relations.Insert(0, query.From.Relations.First()); 
+
                         multiQuery.Queries.Add(rightMultiQuery);
                         var tuple = new Tuple<dynamic, dynamic>(query, rightMultiQuery);
                         multiQuery.Operators.Add(tuple, SetOperator.Division);

@@ -33,38 +33,49 @@
         /// </summary>
         public void Optimize(QoPackage package)
         {
-            var tree = package.Tree;            
+            var tree = package.Tree;
+            var isValid = false;
             try
             { 
                 if (tree.Content is SetOperator)
                 {
                     ApplyRule1(tree.LeftChild);
                     ApplyRule1(tree.RightChild);
+                    isValid = DescendentsAreProper(tree);
                     package.Optimization1 = tree.GetCleanNode();
                     ApplyRule2(tree.LeftChild);
                     ApplyRule2(tree.RightChild);
+                    isValid = DescendentsAreProper(tree);
                     package.Optimization2 = tree.GetCleanNode();
                     ApplyRule3(tree.LeftChild);
                     ApplyRule3(tree.RightChild);
+                    isValid = DescendentsAreProper(tree);
                     package.Optimization3 = tree.GetCleanNode();
                     ApplyRule4(tree.LeftChild);
                     ApplyRule4(tree.RightChild);
+                    isValid = DescendentsAreProper(tree);
                     package.Optimization4 = tree.GetCleanNode();
                     ApplyRule5(tree.LeftChild);
                     ApplyRule5(tree.RightChild);
+                    isValid = DescendentsAreProper(tree);
                     package.Optimization5 = tree.GetCleanNode();
                 }
                 else
                 {
                     ApplyRule1(tree);
+                    isValid = DescendentsAreProper(tree);
                     package.Optimization1 = tree.GetCleanNode();
-                    tree = ApplyRule2(tree);
+                    ApplyRule2(tree);
+                    isValid = DescendentsAreProper(tree);
                     package.Optimization2 = tree.GetCleanNode();
                     ApplyRule3(tree);
+                    isValid = DescendentsAreProper(tree);
                     package.Optimization3 = tree.GetCleanNode();
                     ApplyRule4(tree);
+                    isValid = DescendentsAreProper(tree);
                     package.Optimization4 = tree.GetCleanNode();
                     ApplyRule5(tree);
+                    isValid = DescendentsAreProper(tree);
                     package.Optimization5 = tree.GetCleanNode();
                 }
 
@@ -83,10 +94,10 @@
             var selectionNodes = GetAllSelectionNodes(root);
             foreach (var node in selectionNodes)
             {
-                if (((Selection)node.Content).Conditions.Count <= 1 || !IsConjunctiveSelectionNode(node)) continue;
+                if (!IsConjunctiveSelectionNode(node)) continue;
 
-                var conditions = ((Selection) node.Content).Conditions;
-                var iterator = node.Parent ?? root;
+                var conditions = ((Selection)node.Content).Conditions;
+                var iterator = node.Parent;
                 var lastNode = node.LeftChild;
                 for (var i = 0; i < conditions.Count; i++)
                 {
@@ -108,118 +119,24 @@
         /// <summary>
         /// Moves selections as close to their relations as possible.
         /// </summary>
-        private Node ApplyRule2(Node root)
+        private void ApplyRule2(Node root)
         {
-            if(root.Content is SetOperator)
+            if (root.Content is SetOperator)
             {
                 ApplyRule2(root.LeftChild);
                 ApplyRule2(root.RightChild);
-                return root;
+                return;
             }
             var treeNodes = GetNodesList(root);
             var treeRelations = treeNodes.Where(n => n.Content is Relation);
             var selectionNodes = GetAllSelectionNodes(root);
-            if (!selectionNodes.Any()) return root;
-            if (selectionNodes.All(s => !(s.Content as Selection).Conditions.Any())) return root;
-
-            // Remove duplicate selections
-            var duplicates = new List<Tuple<Node,Node>>();
-            if (selectionNodes.Count > 1)
-            {
-                for (var i = 0; i < selectionNodes.Count; i++)
-                {
-                    var conditions1 = ((Selection)selectionNodes[i].Content).Conditions;
-                    for (var j = i + 1; j < selectionNodes.Count; j++)
-                    {
-                        var conditions2 = ((Selection)selectionNodes[j].Content).Conditions;
-                        foreach(var c1 in conditions1)
-                        {
-                            foreach(var c2 in conditions2)
-                            {
-                                var lefts = c1.LeftSide.ToString() == c2.LeftSide.ToString();
-                                var rights = c1.RightSide.ToString() == c2.RightSide.ToString();
-                                var lefts2 = c1.LeftSide.ToString() == c2.RightSide.ToString();
-                                var rights2 = c1.RightSide.ToString() == c2.LeftSide.ToString();
-                                if ((lefts && rights) || (lefts2 && rights2))
-                                {
-                                    var tuple = new Tuple<Node, Node>(selectionNodes[i], selectionNodes[j]);
-                                    if (!duplicates.Contains(tuple)) duplicates.Add(tuple);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            if(duplicates.Any())
-            {
-                foreach(var t in duplicates)
-                {
-                    if(t.Item1 == root || t.Item2 == root)
-                    {
-                        root.LeftChild.LeftChild = null; // not really necessary
-                        root.LeftChild.Parent = null;
-                        selectionNodes.Remove(root);
-                        root = root.LeftChild;
-                    }
-                    else // So it doesn't really matter which node is removed in this case so I'm just picking the first one
-                    {
-                        t.Item1.LeftChild.Parent = t.Item1.Parent;
-                        t.Item1.Parent = t.Item1.LeftChild;
-                        selectionNodes.Remove(t.Item1);
-                    }
-                }
-            }
-
+            if (!selectionNodes.Any()) return;
+            if (selectionNodes.All(s => !(s.Content as Selection).Conditions.Any())) return;
             var joinNodes = selectionNodes.Where(n => IsJoinCondition((n.Content as Selection).Conditions.First()));
-            
-            // Move relations with more selects to the very far left.
-            // This prevents cases where cartesian products do not have an immediate selection as their parent.
-            if (joinNodes.Any())
-            {
-                var cartRankings = new Dictionary<Node, int>();
-                foreach (var n in treeRelations)
-                {
-                    cartRankings.Add(n, 0);
-                }
-                foreach (var n in joinNodes)
-                {
-                    var relation1 = GetRelationForAttribute((n.Content as Selection).Conditions.First().LeftSide as Attribute, treeRelations);
-                    var relation2 = GetRelationForAttribute((n.Content as Selection).Conditions.First().RightSide as Attribute, treeRelations);
-                    cartRankings[relation1]++;
-                    cartRankings[relation2]++;
-                }
-                var firstValue = cartRankings.First().Value;
-                if (!cartRankings.All(c => c.Value == firstValue)) // If they all have the same value, don't do anything.
-                {
-                    var firstCart = GetFirstCartesian(root);
-                    var iter = firstCart;
-                    var orderedRelations = cartRankings.OrderBy(o => o.Value).Select(n => n.Key);
-                    for (int i = 0; i < orderedRelations.Count() - 1; i++)
-                    {
-                        if (i == orderedRelations.Count() - 2)
-                        {
-                            var ele1 = orderedRelations.ElementAt(i);
-                            var ele2 = orderedRelations.ElementAt(i + 1);
-                            iter.RightChild = ele1;
-                            ele1.Parent = iter;
-                            iter.LeftChild = ele2;
-                            ele2.Parent = iter;
-                        }
-                        else
-                        {
-                            var ele = orderedRelations.ElementAt(i);
-                            iter.RightChild = ele;
-                            iter = iter.LeftChild;
-                            ele.Parent = iter;
-                        }
-                    }
-                }
-            }
 
             // Bury the selection nodes within the query tree as deeply as possible.
             foreach (var node in selectionNodes)
             {
-                if (node == root) continue;
                 var selection = node.Content as Selection;
                 var condition = selection.Conditions.First();
                 var isJoin = IsJoinCondition(condition);
@@ -279,7 +196,6 @@
                     }
                 }
             }
-            return root;
         }
         /// <summary>
         /// Moves non-Join selection conditions to the left side of the tree.
@@ -316,7 +232,7 @@
                             var leftRightRank = GetRestrictiveWeight(iter.LeftChild.LeftChild.RightChild);
                             var rightRank = GetRestrictiveWeight(iter.RightChild);
 
-                            if (leftLeftRank < rightRank)
+                            if (leftLeftRank <= rightRank)
                             {
                                 var select1 = iter.Parent;
                                 var select1Parent = iter.Parent.Parent;
@@ -401,8 +317,11 @@
                             if (!(attribute is Attribute)) continue;
                             foreach (var availableAttribute in availableAttributes)
                             {
-                                if (attribute.Name == availableAttribute.Name &&
-                                    attribute.Alias == availableAttribute.Alias)
+                                var att = attribute as Attribute;
+                                var att2 = availableAttribute as Attribute;
+
+                                if (att.Name == att2.Name &&
+                                    (att.Alias == att2.Alias || att.Alias == att2.Alias.Substring(0,1)))
                                 {
                                     intersection.Add(attribute);
                                 }

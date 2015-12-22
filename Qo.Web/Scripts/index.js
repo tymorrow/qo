@@ -79,7 +79,7 @@
                     offset = 2;
                 }
                 if (d !== null && d.subscript !== null) {
-                    var splits = d.subscript.trim().split(/( AND | OR )/gi);
+                    var splits = d.subscript.trim().split(/( \u2227 | \u2228 )/gi);
                     for (var s = 0; s < splits.length ; s++) {
                         output += '<tspan style="font-size: 10px" x="0" y="10" dy="' + ((s + offset) * 5) + '">';
                         if (s >= splits.length - 1) {
@@ -124,7 +124,10 @@
             $('#result-area-loader').hide();
             return;
         }
-        input = input.replace("’", "'").replace("‘", "'").replace("‘", "'").replace("’", "'");
+        input = input
+            .replace("’", "'").replace("‘", "'")
+            .replace("‘", "'").replace("’", "'")
+            .replace("’", "'").replace("’", "'");
         $('#txtSQL').val(input);
         var formatted = SqlPrettyPrinter.format(input, settings);
 

@@ -46,14 +46,32 @@
         {
             // Projection
             var projectionNode = new Node();
-            projectionNode.Content = new Projection
-            {
-                Attributes = Select.Attributes
-            };
-
+            var groupByNode = new Node();
+            var havingNode = new Node();
             // Selection from Group By
-
-            // Selection from Having
+            if (GroupBy.Attributes.Any())
+            {
+                groupByNode.Content = new Aggregate()
+                {
+                    Attributes = Select.Attributes,
+                    Groupings = GroupBy.Attributes
+                };
+                if(Having.Conditions.Any())
+                {
+                    havingNode.Content = new Selection()
+                    {
+                        Conditions = Having.Conditions,
+                        Operators = Having.Operators
+                    };
+                }
+            }
+            else
+            {
+                projectionNode.Content = new Projection
+                {
+                    Attributes = Select.Attributes
+                };
+            }
 
             // Selection from where
             Node selectionNode = new Node();
@@ -75,11 +93,46 @@
 
             var root = projectionNode;
             var iter = root;
-            if(selectionNode.Content != null)
+            if (projectionNode.Content != null)
             {
-                root.LeftChild = selectionNode;
-                root.LeftChild.Parent = root;
-                iter = iter.LeftChild;
+                if (selectionNode.Content != null)
+                {
+                    root.LeftChild = selectionNode;
+                    root.LeftChild.Parent = root;
+                    iter = iter.LeftChild;
+                }
+            }
+            else if(groupByNode.Content != null)
+            {
+                if(havingNode.Content != null)
+                {
+                    root = havingNode;
+                    iter = root;
+
+                    // Add having node
+                    root.LeftChild = groupByNode;
+                    root.LeftChild.Parent = root;
+                    iter = iter.LeftChild;
+                    // Add selection node
+                    if (selectionNode.Content != null)
+                    {
+                        iter.LeftChild = selectionNode;
+                        iter.LeftChild.Parent = iter;
+                        iter = iter.LeftChild;
+                    }
+                }
+                else
+                {
+                    root = groupByNode;
+                    iter = root;
+
+                    if (selectionNode.Content != null)
+                    {
+                        root.LeftChild = selectionNode;
+                        root.LeftChild.Parent = root;
+                        iter = iter.LeftChild;
+                    }
+                }
             }
 
             // TODO: Could do some sorting of relations here to help later.
@@ -122,6 +175,69 @@
             {
                 Content = relation
             }; ;
+        }
+
+        public void RemoveRedundantRelations()
+        {
+            var necessary = new List<Relation>();
+            foreach(var c in Where.Conditions)
+            {
+                foreach(var r in From.Relations.Select(l => l as Relation))
+                {
+                    var atts = r.Attributes.Select(a => a.Name);
+                    if (c.LeftSide is Attribute)
+                    {
+                        var cl = c.LeftSide as Attribute;              
+                        if(atts.Contains(cl.Name))
+                        {
+                            necessary.Add(r);
+                        }
+                    }
+                    if(c.LeftSide is Function)
+                    {
+                        var cl = c.LeftSide as Function;
+                        if(cl.Attributes.Any())
+                        {
+                            foreach(var a in cl.Attributes.Select(n => n.Name))
+                            {
+                                if (atts.Contains(a))
+                                {
+                                    necessary.Add(r);
+                                }
+                            }
+                        }
+                    }
+                    if(c.RightSide is Attribute)
+                    {
+                        var cr = c.RightSide as Attribute;
+                        if (atts.Contains(cr.Name))
+                        {
+                            necessary.Add(r);
+                        }
+                    }
+                    if (c.RightSide is Function)
+                    {
+                        var cr = c.RightSide as Function;
+                        if (cr.Attributes.Any())
+                        {
+                            foreach (var a in cr.Attributes.Select(n => n.Name))
+                            {
+                                if (atts.Contains(a))
+                                {
+                                    necessary.Add(r);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            foreach (var r in necessary.Distinct())
+            {
+                if(!From.Relations.Contains(r))
+                {
+                    From.Relations.Add(r);
+                }
+            }
         }
     }
 }

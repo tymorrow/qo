@@ -22,7 +22,7 @@ WHERE R2.bid = B2.bid AND B2.color = ‘green’))
             var qoParser = new QoParser();
             var qoOptimizer = new QoOptimizer();
             var package = qoParser.Parse(sqlQuery.Trim());
-            qoOptimizer.Run(package);
+            qoOptimizer.Optimize(package);
 
             Console.ReadKey();
         }

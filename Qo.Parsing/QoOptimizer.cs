@@ -31,7 +31,7 @@
         /// Applies all query optimization rules on a query tree 
         /// and outputs the Graphviz files after each optimization.
         /// </summary>
-        public void Run(QoPackage package)
+        public void Optimize(QoPackage package)
         {
             var tree = package.Tree;            
             try
@@ -58,7 +58,7 @@
                 {
                     ApplyRule1(tree);
                     package.Optimization1 = tree.GetCleanNode();
-                    ApplyRule2(tree);
+                    tree = ApplyRule2(tree);
                     package.Optimization2 = tree.GetCleanNode();
                     ApplyRule3(tree);
                     package.Optimization3 = tree.GetCleanNode();
@@ -83,10 +83,10 @@
             var selectionNodes = GetAllSelectionNodes(root);
             foreach (var node in selectionNodes)
             {
-                if (!IsConjunctiveSelectionNode(node)) continue;
+                if (((Selection)node.Content).Conditions.Count <= 1 || !IsConjunctiveSelectionNode(node)) continue;
 
                 var conditions = ((Selection) node.Content).Conditions;
-                var iterator = node.Parent;
+                var iterator = node.Parent ?? root;
                 var lastNode = node.LeftChild;
                 for (var i = 0; i < conditions.Count; i++)
                 {
@@ -108,19 +108,68 @@
         /// <summary>
         /// Moves selections as close to their relations as possible.
         /// </summary>
-        private void ApplyRule2(Node root)
+        private Node ApplyRule2(Node root)
         {
             if(root.Content is SetOperator)
             {
                 ApplyRule2(root.LeftChild);
                 ApplyRule2(root.RightChild);
-                return;
+                return root;
             }
             var treeNodes = GetNodesList(root);
             var treeRelations = treeNodes.Where(n => n.Content is Relation);
             var selectionNodes = GetAllSelectionNodes(root);
-            if (!selectionNodes.Any()) return;
-            if (selectionNodes.All(s => !(s.Content as Selection).Conditions.Any())) return;
+            if (!selectionNodes.Any()) return root;
+            if (selectionNodes.All(s => !(s.Content as Selection).Conditions.Any())) return root;
+
+            // Remove duplicate selections
+            var duplicates = new List<Tuple<Node,Node>>();
+            if (selectionNodes.Count > 1)
+            {
+                for (var i = 0; i < selectionNodes.Count; i++)
+                {
+                    var conditions1 = ((Selection)selectionNodes[i].Content).Conditions;
+                    for (var j = i + 1; j < selectionNodes.Count; j++)
+                    {
+                        var conditions2 = ((Selection)selectionNodes[j].Content).Conditions;
+                        foreach(var c1 in conditions1)
+                        {
+                            foreach(var c2 in conditions2)
+                            {
+                                var lefts = c1.LeftSide.ToString() == c2.LeftSide.ToString();
+                                var rights = c1.RightSide.ToString() == c2.RightSide.ToString();
+                                var lefts2 = c1.LeftSide.ToString() == c2.RightSide.ToString();
+                                var rights2 = c1.RightSide.ToString() == c2.LeftSide.ToString();
+                                if ((lefts && rights) || (lefts2 && rights2))
+                                {
+                                    var tuple = new Tuple<Node, Node>(selectionNodes[i], selectionNodes[j]);
+                                    if (!duplicates.Contains(tuple)) duplicates.Add(tuple);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if(duplicates.Any())
+            {
+                foreach(var t in duplicates)
+                {
+                    if(t.Item1 == root || t.Item2 == root)
+                    {
+                        root.LeftChild.LeftChild = null; // not really necessary
+                        root.LeftChild.Parent = null;
+                        selectionNodes.Remove(root);
+                        root = root.LeftChild;
+                    }
+                    else // So it doesn't really matter which node is removed in this case so I'm just picking the first one
+                    {
+                        t.Item1.LeftChild.Parent = t.Item1.Parent;
+                        t.Item1.Parent = t.Item1.LeftChild;
+                        selectionNodes.Remove(t.Item1);
+                    }
+                }
+            }
+
             var joinNodes = selectionNodes.Where(n => IsJoinCondition((n.Content as Selection).Conditions.First()));
             
             // Move relations with more selects to the very far left.
@@ -170,6 +219,7 @@
             // Bury the selection nodes within the query tree as deeply as possible.
             foreach (var node in selectionNodes)
             {
+                if (node == root) continue;
                 var selection = node.Content as Selection;
                 var condition = selection.Conditions.First();
                 var isJoin = IsJoinCondition(condition);
@@ -229,6 +279,7 @@
                     }
                 }
             }
+            return root;
         }
         /// <summary>
         /// Moves non-Join selection conditions to the left side of the tree.
@@ -389,54 +440,11 @@
         /// </summary>
         private void ApplyRule6(Node root)
         {
-            var projectionNodes = GetAllProjectionNodes(root, root);
-
-            var counter = 1;
-            foreach (var node in projectionNodes)
-            {
-                GenerateGraph(node, "OP6subgraph" + counter);
-                counter++;
-            }
+            
         }
 
         #region Graph Generation Methods
-
-        /// <summary>
-        /// Generates a Graphviz file for the given node.
-        /// </summary>
-        private void GenerateGraph(Node root, string nameSuffix)
-        {
-            // Gather the nodes and edges for the graph from the parse tree
-            var nodes = GetNodesList(root);
-            var edges = GetEdgesList(root);
-
-            // Build the raw file contents
-            var sb = new StringBuilder();
-            sb.AppendLine("digraph G {");
-            sb.AppendLine("\tnode [color=transparent]");
-            sb.AppendLine("\tedge [dir=none]");
-            foreach (var node in nodes)
-            {
-                sb.AppendLine("\t" + node.Id + " [label=\"" + node.GetContentString() + "\"]");
-            }
-            foreach (var edge in edges)
-            {
-                sb.AppendLine("\t" + edge);
-            }
-            sb.AppendLine("}");
-
-            // Output the contents to a file
-            const string outputFolder = @"Graphs\";
-            var folderPath = Path.Combine(Environment.CurrentDirectory, outputFolder);
-            var exists = Directory.Exists(folderPath);
-            if (!exists)
-                Directory.CreateDirectory(folderPath);
-
-            using (var outfile = new StreamWriter(Path.Combine(folderPath, nameSuffix + ".gv")))
-            {
-                outfile.Write(sb.ToString());
-            }
-        }
+        
         /// <summary>
         /// Generates a list of nodes for all children of the given node.
         /// </summary>

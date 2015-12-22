@@ -63,7 +63,7 @@
                 return "18";
             })
             .html(function (d) {
-                return d.name;
+                return d.name.trim();
             })
             .append("tspan")
             .style("baseline-shift", function (d) {
@@ -71,10 +71,17 @@
             })
             .html(function (d) {
                 var output = "";
+                var offset = 0;
+                if (d !== null && d.preSubscript !== null) {
+                    output += '<tspan style="font-size: 10px" x="0" y="10" dy="0">';
+                    output += '[group on: ' + d.preSubscript + ']';
+                    output += '</tspan>';
+                    offset = 2;
+                }
                 if (d !== null && d.subscript !== null) {
-                    var splits = d.subscript.split(/( AND | OR )/gi);
-                    for (var s = 0; s < splits.length; s++) {
-                        output += '<tspan style="font-size: 10px" x="0" y="10" dy="'+ (s*5) +'">';
+                    var splits = d.subscript.trim().split(/( AND | OR )/gi);
+                    for (var s = 0; s < splits.length ; s++) {
+                        output += '<tspan style="font-size: 10px" x="0" y="10" dy="' + ((s + offset) * 5) + '">';
                         if (s >= splits.length - 1) {
                             output += splits[s];
                         } else if (s < splits.length - 1) {
@@ -111,7 +118,14 @@
         $('#result-area').hide();
         $('#result-area-loader').show();
 
-        var input = $('#txtSQL').val();
+        var input = $('#txtSQL').val().trim();
+        if (!input) {
+            alert("Empty SQL queries are not permitted.");
+            $('#result-area-loader').hide();
+            return;
+        }
+        input = input.replace("’", "'").replace("‘", "'").replace("‘", "'").replace("’", "'");
+        $('#txtSQL').val(input);
         var formatted = SqlPrettyPrinter.format(input, settings);
 
         $.ajax({
@@ -121,15 +135,15 @@
             data: { SqlQuery: input, Tables: getSchema() },
             success: function (result) {
                 $('#result-area-loader').hide();
-                if (result.ParseSuccess) {
-                    $('#result-area').show();
-                    $('#output').html(formatted);
-                    prettyPrint('#output');
-                    $('#output').removeClass('prettyprinted');
+                console.log(result);
+                $('#result-area').show();
+                $('#output').html(formatted);
+                prettyPrint('#output');
+                $('#output').removeClass('prettyprinted');
 
-                    console.log(result);
-
-                    showTree(0);
+                showTree(0);
+                
+                try{
                     $('#relational-algebra').html(result.RelationalAlgebra);
                     buildTree('#tree-0', result.InitialTree);
                     buildTree('#tree-1', result.Optimization1);
@@ -137,8 +151,10 @@
                     buildTree('#tree-3', result.Optimization3);
                     buildTree('#tree-4', result.Optimization4);
                     buildTree('#tree-5', result.Optimization5);
-                } else {
-                    $('#output').html(result.Error);
+                }catch(e){}
+
+                if (result.Error) {
+                    $('#output').html('The server returned the following error: \n' + result.Error);
                 }
             },
             error: function (resp) {
@@ -149,13 +165,6 @@
         });
 
         window.APPDATA.formatted = formatted;
-    };
-
-    window.clearSql = function () {
-        $('#preFormatted').html('');
-        $('#txtSQL').val('');
-        $('#txtSQL').focus();
-        saveState();
     };
 
     // Schema functions
@@ -204,7 +213,7 @@
                 addTableAttribute(table.Name);
             }
             $('#' + table.Name + ' #new-att #name').val('');
-            $('#' + table.Name + ' #new-att #type').val('int');
+            $('#' + table.Name + ' #new-att #type').val('integer');
             $('#' + table.Name + ' #new-att #pk').prop('checked', false);
         }
         $('#new-table').val('');
@@ -222,7 +231,7 @@
         var tableHtml =
         '\
             <div class="list-group table" id="' + tableName + '"> \
-                <div class ="list-group-item active"> \
+                <div class ="list-group-item list-group-item-info"> \
                     <span class="table-name">' + tableName + '</span> \
                     <button class="btn btn-default btn-xs pull-right" type="button" onclick="removeTable(\''+ tableName + '\')" \
                             data-toggle="tooltip" data-placement="right" title="Delete Table"> \
@@ -239,10 +248,10 @@
                     </div><br/> \
                     <div class="input-group"> \
                         <select class="form-control" id="type"> \
-                            <option>int</option> \
-                            <option>double</option> \
+                            <option>integer</option> \
+                            <option>real</option> \
                             <option>string</option> \
-                            <option>datetime</option> \
+                            <option>date</option> \
                         </select> \
                         <span class="input-group-btn"> \
                             <button class="btn btn-default" type="button" onclick="addTableAttribute(\''+ tableName + '\')" \
@@ -263,7 +272,10 @@
 
         var attName = $('#' + tableId + ' #new-att #name').val();
         var attId = tableId + '-' + attName;
-        if (document.getElementById(attId) !== null) {
+        if (!attName) {
+            alert("Empty attribute names are not accepted.");
+            return;
+        } else if (document.getElementById(attId) !== null) {
             alert("This attribute name is already in use.  Please choose another.");
             return;
         }
@@ -275,7 +287,7 @@
         var attHtml =
         '\
             <div class ="list-group-item att" id="' + attId + '""> \
-                ' + attNameHtml + ' <small class="type" id="' + attId + '-type">' + attType + '</small> \
+                ' + attNameHtml + ' <small class="type label label-info" id="' + attId + '-type" style="margin-left:5px">' + attType + '</small> \
                 <button class="btn btn-default btn-xs pull-right" type="button" onclick="removeTableAttribute(\'' + attId + '\')" \
                         data-toggle="tooltip" data-placement="right" title="Delete Attribute"> \
                     <span class="glyphicon glyphicon-minus"></span> \
@@ -293,6 +305,43 @@
 
     window.removeTableAttribute = function (id) {
         $('#' + id.trim()).remove();
+        saveState();
+    };
+
+    window.loadTableAttribute = function (tableId, name, pk, type) {
+
+    };
+
+    window.loadDefaultSchema = function () {
+        $('.table').remove();
+        var schema = [
+            {
+                Name: "Sailors",
+                Attributes: [
+                    { Name: "sid", IsPk: true, Type: "integer" },
+                    { Name: "sname", IsPk: false, Type: "string" },
+                    { Name: "rating", IsPk: false, Type: "integer" },
+                    { Name: "age", IsPk: false, Type: "real" }
+                ]
+            },
+            {
+                Name: "Boats",
+                Attributes: [
+                    { Name: "bid", IsPk: true, Type: "integer" },
+                    { Name: "bname", IsPk: false, Type: "string" },
+                    { Name: "color", IsPk: false, Type: "string" }
+                ]
+            },
+            {
+                Name: "Reserves",
+                Attributes: [
+                    { Name: "sid", IsPk: true, Type: "integer" },
+                    { Name: "bid", IsPk: true, Type: "integer" },
+                    { Name: "day", IsPk: true, Type: "date" }
+                ]
+            }
+        ];
+        setSchema(schema);
         saveState();
     };
 

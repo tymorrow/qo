@@ -8,7 +8,14 @@
 <div class="row">
     <div class="col-md-3">
         <div class="panel panel-primary" id="schema">
-            <div class="panel-heading"><strong>Schema</strong></div>
+            <div class="panel-heading">
+                <strong>Schema</strong>
+                <button class="btn btn-default btn-xs pull-right" onclick="loadDefaultSchema()"
+                        data-toggle="tooltip" data-placement="right"
+                        title="Load sample schema">
+                    <i class="fa fa-table"></i>
+                </button>
+            </div>
             <div class="list-group">
                 <div class="list-group-item">
                     <div class="input-group">
@@ -27,15 +34,14 @@
     </div>
     <div class="col-md-9">
         <div class="panel panel-primary">
-            <div class="panel-heading"><strong>Enter a SQL Query</strong></div>
+            <div class="panel-heading"><strong>SQL Query</strong></div>
             <div class="panel-body">
                 <div class="form-group">
                     <textarea class="form-control" id="txtSQL" onkeyup="saveState()" rows="10" style="max-width:100%"></textarea>
                 </div>
-                <div class="row text-right">
-                    <div class="col-xs-12">
-                        <button onclick="parseAndFormat()" class="btn btn-primary">Optimize!</button>
-                        <button onclick="clearSql()" class="btn btn-default">Clear</button>
+                <div class="row">
+                    <div class="col-xs-12 text-right">
+                        <button onclick="parseAndFormat()" class="btn btn-primary">Optimize</button>
                     </div>
                 </div>
             </div>

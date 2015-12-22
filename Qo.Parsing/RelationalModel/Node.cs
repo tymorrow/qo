@@ -70,8 +70,8 @@
             if(Content is Relation)
             {
                 var c = Content as Relation;
-                if (c.Aliases.Any())
-                    node.subscript = Relation.AliasSymbol + " " + c.Aliases.First();
+                if (c.Aliases.Any() && c.Aliases.Last().ToString() != c.Name)
+                    node.subscript = Relation.AliasSymbol + " " + c.Aliases.Last();
                 node.name = c.Name;
             }
             else if (Content is Projection)
@@ -85,6 +85,13 @@
                 var c = Content as Selection;
                 node.name = Selection.Symbol;
                 node.subscript = c.GetConditionsString();
+            }
+            else if (Content is Aggregate)
+            {
+                var c = Content as Aggregate;
+                node.name = Aggregate.Symbol;
+                node.preSubscript = c.GetGroupingsString();
+                node.subscript = c.GetAttributeString();
             }
             else if (Content is Join)
             {
@@ -134,6 +141,10 @@
                 output = Content + LeftChild.ToString();
             }
             else if (Content is Selection)
+            {
+                output = Content + LeftChild.ToString();
+            }
+            else if (Content is Aggregate)
             {
                 output = Content + LeftChild.ToString();
             }

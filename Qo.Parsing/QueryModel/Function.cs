@@ -8,6 +8,7 @@ namespace Qo.Parsing.QueryModel
     /// </summary>
     public class Function
     {
+        public string Alias { get; set; }
         public string Type { get; set; }
         public List<Attribute> Attributes { get; set; }
         public bool IsWildCard { get; set; }
@@ -35,7 +36,7 @@ namespace Qo.Parsing.QueryModel
                     display += Attributes[i].ToString();
                 }
             }
-            display += ")";
+            display += ") " + (!string.IsNullOrEmpty(Alias) ? Relation.AliasSymbol + " " + Alias : string.Empty);
             return display;
         }
     }

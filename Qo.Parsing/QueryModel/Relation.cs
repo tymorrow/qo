@@ -47,8 +47,8 @@
         /// </summary>
         public override string ToString()
         {
-            if (Aliases.Any())
-                return Name + " <sub>" + AliasSymbol + "</sub>" + Aliases.First();
+            if (Aliases.Any() && Aliases.Last().ToString() != Name)
+                return Name + " <sub>" + AliasSymbol + "</sub>" + Aliases.Last();
             return Name;
         }
     }

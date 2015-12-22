@@ -15,8 +15,8 @@
         static public readonly string Symbol = "\u03C3";
         private readonly Dictionary<BooleanBinaryExpressionType, string> _operatorMap = new Dictionary<BooleanBinaryExpressionType, string>
         {
-            {BooleanBinaryExpressionType.And, " AND "},
-            {BooleanBinaryExpressionType.Or, " OR "}
+            {BooleanBinaryExpressionType.And, " \u2227 "},
+            {BooleanBinaryExpressionType.Or, " \u2228 "}
         };
 
         public List<Condition> Conditions { get; set; }
@@ -37,7 +37,7 @@
 
             if (!Conditions.Any()) return output;
             
-            return Symbol + " " + GetConditionsString() + " ";
+            return Symbol + " <sub>" + GetConditionsString() + "</sub> ";
         }
 
         public string GetConditionsString()

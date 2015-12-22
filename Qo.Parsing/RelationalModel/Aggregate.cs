@@ -19,7 +19,7 @@
 
             if (!Attributes.Any()) return output;
 
-            return Symbol + " <sub>" + GetAttributeString() + "</sub> ";
+            return "<sub>" + GetGroupingsString() + "</sub> " + Symbol + " <sub>" + GetAttributeString() + "</sub> ";
         }
 
         public string GetAttributeString()

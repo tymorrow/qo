@@ -52,7 +52,7 @@
             }
             var package = qoParser.Parse(model.SqlQuery);
             if(package.ParseSuccess)
-                qoOptimizer.Run(package);
+                qoOptimizer.Optimize(package);
 
             return Json(package, JsonRequestBehavior.AllowGet);
         } 

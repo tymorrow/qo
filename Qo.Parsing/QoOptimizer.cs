@@ -235,6 +235,12 @@
         /// </summary>
         private void ApplyRule3(Node root)
         {
+            if(root.Content is SetOperator && (SetOperator)root.Content != SetOperator.CartesianProduct)
+            {
+                ApplyRule3(root.LeftChild);
+                ApplyRule3(root.RightChild);
+                return;
+            }
             var rootCart = root;
             // Find uppermost cartesian product node.
             while(!(rootCart.LeftChild != null) && !(rootCart.Content is SetOperator))

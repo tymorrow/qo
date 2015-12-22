@@ -171,10 +171,6 @@
     <Content Include="Scripts\lang-sql.js" />
     <Content Include="Scripts\modernizr-2.8.3.js" />
     <Content Include="Scripts\prettify.js" />
-    <Content Include="Scripts\respond.js" />
-    <Content Include="Scripts\respond.matchmedia.addListener.js" />
-    <Content Include="Scripts\respond.matchmedia.addListener.min.js" />
-    <Content Include="Scripts\respond.min.js" />
     <Content Include="Scripts\SqlParser.js" />
     <Content Include="Scripts\SqlPrettyPrinter.js" />
     <Content Include="Web.config" />

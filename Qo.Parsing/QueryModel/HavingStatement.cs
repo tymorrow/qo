@@ -8,7 +8,7 @@
     /// <summary>
     /// Stores pairs of conditions joined by a boolean binary expression type.
     /// </summary>
-    public class WhereStatement
+    public class HavingStatement
     {
         public static readonly Dictionary<BooleanBinaryExpressionType, string> OperatorMap = new Dictionary<BooleanBinaryExpressionType, string>
         {
@@ -19,13 +19,13 @@
         public List<Condition> Conditions { get; set; }
         public Dictionary<Tuple<Condition, Condition>, BooleanBinaryExpressionType> Operators { get; set; }
 
-        public WhereStatement()
+        public HavingStatement()
         {
             Conditions = new List<Condition>();
             Operators = new Dictionary<Tuple<Condition, Condition>, BooleanBinaryExpressionType>();
         }
         /// <summary>
-        /// Converts the WhereStatement to its string representation.
+        /// Converts the HavingStatement to its string representation.
         /// </summary>
         public override string ToString()
         {

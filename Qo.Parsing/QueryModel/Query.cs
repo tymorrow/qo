@@ -13,12 +13,16 @@
         public SelectStatement Select { get; set; }
         public FromStatement From { get; set; }
         public WhereStatement Where { get; set; }
+        public GroupByStatement GroupBy { get; set; }
+        public HavingStatement Having { get; set; }
 
         public Query()
         {
             Select = new SelectStatement();
             From = new FromStatement();
             Where = new WhereStatement();
+            GroupBy = new GroupByStatement();
+            Having = new HavingStatement();
         }
 
         /// <summary>
@@ -40,12 +44,18 @@
         /// </summary>
         public Node GetQueryTree()
         {
+            // Projection
             var projectionNode = new Node();
             projectionNode.Content = new Projection
             {
                 Attributes = Select.Attributes
             };
 
+            // Selection from Group By
+
+            // Selection from Having
+
+            // Selection from where
             Node selectionNode = new Node();
             if (Where.Conditions.Any())
             {
@@ -56,6 +66,7 @@
                 };
             }
 
+            // Relations
             List<Node> relationNodes = new List<Node>();
             foreach(var r in From.Relations)
             {

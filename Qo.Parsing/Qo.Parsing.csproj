@@ -44,6 +44,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="QoPackage.cs" />
+    <Compile Include="QueryModel\HavingStatement.cs" />
+    <Compile Include="QueryModel\GroupByStatement.cs" />
     <Compile Include="RelationalModel\CleanNode.cs" />
     <Compile Include="Console.cs" />
     <Compile Include="IConsole.cs" />
@@ -61,6 +63,7 @@
     <Compile Include="QoParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RelationalModel\Node.cs" />
+    <Compile Include="RelationalModel\Aggregate.cs" />
     <Compile Include="RelationalModel\Projection.cs" />
     <Compile Include="RelationalModel\Selection.cs" />
     <Compile Include="QueryModel\Schema.cs" />

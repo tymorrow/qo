@@ -222,6 +222,8 @@
                         var rightQuery = rightQueryExp as Query;
                         // Add comparison to where clause of subquery 
                         ModifyQueryDueToComparison(rightQuery, att, whereClause.ComparisonType);
+                        rightQuery.Select.Attributes.Clear();
+                        rightQuery.Select.Attributes.Add(query.Select.Attributes.First());
                         // Build multi-query
                         multiQuery.Queries.Add(query);
                         multiQuery.Queries.Add(rightQuery);
@@ -242,6 +244,9 @@
                         ModifyQueryDueToComparison(rightMultiQuery.Queries[0], att, whereClause.ComparisonType);
                         // Add comparison to where clause of right subquery
                         ModifyQueryDueToComparison(rightMultiQuery.Queries[1], att, whereClause.ComparisonType);
+                        var right = rightMultiQuery.Queries[1] as Query;
+                        right.Select.Attributes.Clear();
+                        right.Select.Attributes.Add(query.Select.Attributes.First());
                         // Build/return multi-query
                         multiQuery.Queries.Add(query);
                         multiQuery.Queries.Add(rightMultiQuery);
@@ -278,7 +283,7 @@
                 {
                     var rightQuery = rightQueryExp as Query;
                     // Add comparison to where clause of subquery 
-                    ModifyQueryDueToIn(rightQuery, att);
+                    ModifyQueryDueToIn(rightQuery, att, query.Select.Attributes.First());
                     rightQuery.From.Relations.Add(query.From.Relations.First()); // This may not be enough
                     // Build/return multi-query
                     multiQuery.Queries.Add(rightQuery);
@@ -290,10 +295,10 @@
                 {
                     rightMultiQuery = rightQueryExp as MultiQuery;
                     // Add comparison to where clause of left subquery
-                    ModifyQueryDueToIn(rightMultiQuery.Queries[0], att);
+                    ModifyQueryDueToIn(rightMultiQuery.Queries[0], att, query.Select.Attributes.First());
                     rightMultiQuery.Queries[0].From.Relations.Add(query.From.Relations.First()); // This may not be enough
                     // Add comparison to where clause of right subquery
-                    ModifyQueryDueToIn(rightMultiQuery.Queries[1], att);
+                    ModifyQueryDueToIn(rightMultiQuery.Queries[1], att, query.Select.Attributes.First());
                     rightMultiQuery.Queries[1].From.Relations.Add(query.From.Relations.First()); // This may not be enough
                     // Build/return multi-query
                     multiQuery.Queries.Add(rightMultiQuery);
@@ -319,7 +324,8 @@
                 {
                     if (gSpec.Expression is ColumnReferenceExpression)
                     {
-                        ProcessColumnReferenceExpression(gSpec.Expression as ColumnReferenceExpression);
+                        var attribute = ProcessColumnReferenceExpression(gSpec.Expression as ColumnReferenceExpression);
+                        query.GroupBy.Attributes.Add(attribute);
                     }
                 }
             }
@@ -333,11 +339,15 @@
                 var havingClauseExpression = spec.HavingClause.SearchCondition;
                 if (havingClauseExpression is BooleanBinaryExpression)
                 {
-                    ProcessBooleanBinaryExpression(havingClauseExpression as BooleanBinaryExpression);
+                    var conditionTuple = ProcessBooleanBinaryExpression(havingClauseExpression as BooleanBinaryExpression);
+                    query.Having.Conditions = conditionTuple.Item1;
+                    query.Having.Operators = conditionTuple.Item2;
+
                 }
                 else if (havingClauseExpression is BooleanComparisonExpression)
                 {
-                    ProcessBooleanComparisonExpression(havingClauseExpression as BooleanComparisonExpression);
+                    var condition = ProcessBooleanComparisonExpression(havingClauseExpression as BooleanComparisonExpression);
+                    query.Having.Conditions.Add(condition);
                 }
                 else
                 {
@@ -350,11 +360,11 @@
             return query;
         }
 
-        private void ModifyQueryDueToIn(Query query, QueryModel.Attribute att)
+        private void ModifyQueryDueToIn(Query query, QueryModel.Attribute conAttribute, QueryModel.Attribute selAttribute)
         {
             var condition = new Condition
             {
-                LeftSide = att,
+                LeftSide = conAttribute,
                 Operator = BooleanComparisonType.Equals
             };
             condition.RightSide = query.Select.Attributes.First();
@@ -364,6 +374,9 @@
                 query.Where.Operators.Add(condTuple, BooleanBinaryExpressionType.And);
             }
             query.Where.Conditions.Add(condition);
+
+            query.Select.Attributes.Clear();
+            query.Select.Attributes.Add(selAttribute);
         }
 
         private void ModifyQueryDueToComparison(Query query, QueryModel.Attribute att, BooleanComparisonType op)

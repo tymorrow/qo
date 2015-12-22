@@ -222,7 +222,7 @@
         var tableHtml =
         '\
             <div class="list-group table" id="' + tableName + '"> \
-                <div class ="list-group-item list-group-item-success"> \
+                <div class ="list-group-item active"> \
                     <span class="table-name">' + tableName + '</span> \
                     <button class="btn btn-default btn-xs pull-right" type="button" onclick="removeTable(\''+ tableName + '\')" \
                             data-toggle="tooltip" data-placement="right" title="Delete Table"> \
